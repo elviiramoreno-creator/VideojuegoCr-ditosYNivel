@@ -175,5 +175,6 @@ public class CameraFollow : MonoBehaviour
             Vector3 smoothedPosition = Vector3.Lerp(mainCamera.transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
             mainCamera.transform.position = smoothedPosition;
         }
+        // Si hay Cinemachine, el seguimiento se maneja automáticamente
     }
 }
