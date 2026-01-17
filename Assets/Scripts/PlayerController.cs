@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
@@ -11,6 +12,10 @@ public class PlayerController : MonoBehaviour
              "multiplicadorEnredadera: Reduce la velocidad cuando pisa enredaderas (valor < 1 = más lento).")]
     [SerializeField] private float multiplicadorHielo = 1.4f;
     [SerializeField] private float multiplicadorEnredadera = 0.5f;
+
+    [Header("Combate")]
+    [Tooltip("Daño que hace el player con cada golpe (linterna, etc)")]
+    public int fuerzaGolpe = 15;
 
     [Header("Sistema de Vidas")]
     [SerializeField] private int vidasMaximas = 3;
@@ -46,9 +51,10 @@ public class PlayerController : MonoBehaviour
         }
 
         // Configuración Rigidbody2D
+        // IMPORTANT: Usamos Dynamic para que se detecten las colisiones con el Enemigo (que es Kinematic)
         rb.gravityScale = 0f;
         rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.bodyType = RigidbodyType2D.Dynamic;
 
         // Inicializar vidas
         vidasActuales = vidasMaximas;
@@ -120,7 +126,7 @@ public class PlayerController : MonoBehaviour
     public void LlegarAMeta()
     {
         haLlegadoAMeta = true;
-        rb.linearVelocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero; // Usamos velocity para máxima compatibilidad
 
         if (animator != null && TieneParametro("run"))
             animator.SetBool("run", false);
@@ -193,7 +199,16 @@ public class PlayerController : MonoBehaviour
     void Morir()
     {
         vidasActuales = 0;
-        GameManager.Instance?.ReiniciarNivel();
+        
+        // Intentar usar GameManager, si falla, reiniciar directamente
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.ReiniciarNivel();
+        }
+        else
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
     }
 
     public int GetVidasActuales()
@@ -234,29 +249,14 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>
     /// Se ejecuta cuando el collider del player (si es trigger) entra en contacto con el collider del cuerpo del enemigo.
-    /// IMPORTANTE: Solo debe activarse con el collider del CUERPO del enemigo, no con el de detección.
+    /// MODIFICADO: Ya no causa daño en Trigger para evitar que el área de detección (CircleCollider) mate al player.
+    /// El daño solo debe ocurrir por Colisión Física (OnCollisionEnter2D).
     /// </summary>
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Enemy"))
-        {
-            // Verificar que sea el collider del cuerpo del enemigo (no el de detección)
-            // El collider de detección tiene el script EnemyDetectionZone, así que lo filtramos
-            EnemyDetectionZone detectionZone = other.GetComponent<EnemyDetectionZone>();
-            if (detectionZone == null) // Si NO tiene EnemyDetectionZone, es el collider del cuerpo
-            {
-                EnemyController enemy = other.GetComponent<EnemyController>();
-                if (enemy == null)
-                {
-                    enemy = other.GetComponentInParent<EnemyController>();
-                }
-                
-                if (enemy != null)
-                {
-                    // El player recibe daño cuando el enemigo lo toca
-                    RecibirDano();
-                }
-            }
-        }
+        // Eliminamos la lógica de daño aquí. 
+        // Si el enemigo usa un Trigger para detección, no queremos recibir daño al entrar en él.
+        // El daño se gestionará exclusivamente en OnCollisionEnter2D (choque físico)
+        // o si el EnemyController nos llama explícitamente.
     }
 }

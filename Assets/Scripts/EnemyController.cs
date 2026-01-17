@@ -6,7 +6,8 @@ public class EnemyController : MonoBehaviour
     {
         Patrullando,
         Persiguiendo,
-        Atacando
+        Atacando,
+        Huyendo // Nuevo estado
     }
 
     [Header("Configuración de Patrullaje")]
@@ -17,6 +18,9 @@ public class EnemyController : MonoBehaviour
     [Header("Configuración de Persecución")]
     [SerializeField] private float velocidadPersecucion = 4f;
     [SerializeField] private float distanciaPersecucion = 5f; // Distancia a la que empieza a perseguir
+
+    [Header("Configuración de Huida")]
+    [SerializeField] private float velocidadHuida = 8f; // Velocidad al huir de la luz (Rápido, efecto resorte)
     
     [Header("Sistema de Vida")]
     [SerializeField] private int vidaMaxima = 100;
@@ -50,6 +54,9 @@ public class EnemyController : MonoBehaviour
     private int vidaActual;
     private GameObject barraVidaObjeto;
     private HealthBarController healthBarController;
+
+    // Referencia de quién nos ilumina para huir de él
+    private Vector3 fuenteDeLuz; 
     
     void Start()
     {
@@ -132,9 +139,6 @@ public class EnemyController : MonoBehaviour
         if (vidaActual <= 0)
             return;
         
-        // Actualizar estado según la distancia al player
-        ActualizarEstado();
-        
         // Ejecutar comportamiento según el estado
         switch (estadoActual)
         {
@@ -144,31 +148,106 @@ public class EnemyController : MonoBehaviour
             case EstadoEnemigo.Persiguiendo:
                 PerseguirPlayer();
                 break;
+            case EstadoEnemigo.Huyendo: // Nueva lógica de huida
+                HuirDeLuz();
+                break;
             case EstadoEnemigo.Atacando:
                 // Aquí puedes añadir lógica de ataque
                 break;
         }
 
         // Verificar si el player está cerca para activar animación de ataque
-        VerificarPlayerCerca();
+        // (Solo si no estamos huyendo)
+        if (estadoActual != EstadoEnemigo.Huyendo)
+        {
+            VerificarPlayerCerca();
+        }
         
         // Actualizar barra de vida
         ActualizarBarraVida();
     }
     
+    // =======================
+    // NUEVA MECÁNICA: HUIR DE LA LUZ
+    // =======================
+    public void EmpezarHuir(Vector3 posicionLuz)
+    {
+        // Solo huir si estamos vivos
+        if (vidaActual > 0)
+        {
+            estadoActual = EstadoEnemigo.Huyendo;
+            fuenteDeLuz = posicionLuz;
+            // Debug.Log("¡La luz me quema! Huyendo...");
+        }
+    }
+
+    public void ActualizarPosicionLuz(Vector3 posicionLuz)
+    {
+        fuenteDeLuz = posicionLuz;
+    }
+
+    public void DejarDeHuir()
+    {
+        if (vidaActual > 0 && estadoActual == EstadoEnemigo.Huyendo)
+        {
+            // Volver a perseguir si el player está cerca, o patrullar
+            if (player != null && Vector3.Distance(transform.position, player.transform.position) <= distanciaPersecucion)
+            {
+                estadoActual = EstadoEnemigo.Persiguiendo;
+                Debug.Log("Luz fuera. Volviendo a perseguir.");
+            }
+            else
+            {
+                estadoActual = EstadoEnemigo.Patrullando;
+                Debug.Log("Luz fuera. Volviendo a patrullar.");
+            }
+        }
+    }
+
+    void HuirDeLuz()
+    {
+        // 1. Calcular dirección básica de huida (opuesta a la luz)
+        Vector2 direccionHuida = (transform.position - fuenteDeLuz).normalized;
+
+        // 2. Añadir componente tangencial para que curve/flanquee (buscar zonas oscuras)
+        // Esto crea el efecto de "intentar rodear" o salir del cono lateralmente
+        Vector2 tangencial = new Vector2(-direccionHuida.y, direccionHuida.x); // Perpendicular (90 grados)
+        
+        // Mezclamos: Mucho de huida + un poco de lateral
+        Vector2 direccionFinal = (direccionHuida + tangencial * 0.8f).normalized;
+
+        // Orientación visual (Flip X)
+        if (direccionFinal.x > 0.1f) direccion = 1;
+        else if (direccionFinal.x < -0.1f) direccion = -1;
+        ActualizarOrientacion();
+
+        // Moverse usando Rigidbody2D si es posible
+        if (rb != null && rb.bodyType != RigidbodyType2D.Static)
+        {
+            Vector2 nuevaPosicion = rb.position + direccionFinal * velocidadHuida * Time.deltaTime;
+            rb.MovePosition(nuevaPosicion);
+        }
+        else
+        {
+            transform.position += (Vector3)direccionFinal * velocidadHuida * Time.deltaTime;
+        }
+    }
+
     /// <summary>
     /// Método para recibir daño del player (linterna).
-    /// Se llama desde LinternaController cuando el collider de la linterna entra en contacto con el enemigo.
-    /// IMPORTANTE: El collider de la linterna debe tocar el collider del CUERPO del enemigo (no el de detección).
     /// </summary>
     public void RecibirDano(float cantidadDano)
     {
         if (vidaActual <= 0) return; // Si ya está muerto, no recibir más daño
         
-        vidaActual -= Mathf.RoundToInt(cantidadDano);
+        // Usamos el daño recibido (que viene de la fuerza del player)
+        // Convertimos a int asegurando redondeo correcto
+        int danoInt = Mathf.RoundToInt(cantidadDano);
+        
+        vidaActual -= danoInt;
         vidaActual = Mathf.Clamp(vidaActual, 0, vidaMaxima);
         
-        Debug.Log($"Enemigo recibió {cantidadDano:F1} de daño. Vida restante: {vidaActual}/{vidaMaxima}");
+        Debug.Log($"Enemigo recibió {danoInt} de daño (Input: {cantidadDano}). Vida restante: {vidaActual}/{vidaMaxima}");
         
         // Actualizar barra de vida inmediatamente
         ActualizarBarraVida();
@@ -193,22 +272,11 @@ public class EnemyController : MonoBehaviour
     
     /// <summary>
     /// Método que se ejecuta cuando el enemigo muere.
-    /// Reinicia el nivel cuando el enemigo es eliminado.
     /// </summary>
     void Morir()
     {
-        Debug.Log("Enemigo muerto. Reiniciando nivel...");
-        // Reiniciar el nivel cuando el enemigo muere
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.ReiniciarNivel();
-        }
-        else
-        {
-            // Si no hay GameManager, usar SceneManager directamente
-            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-        }
-        // Destruir el enemigo (aunque el nivel se reinicie, es buena práctica)
+        Debug.Log("Enemigo muerto.");
+        // Destruir el enemigo
         Destroy(gameObject);
     }
 
@@ -497,46 +565,40 @@ public class EnemyController : MonoBehaviour
     
     /// <summary>
     /// Se ejecuta cuando el collider del cuerpo del enemigo (NO trigger) entra en contacto físico con el player.
-    /// El player recibe daño aquí.
+    /// AQUÍ ES DONDE EL PLAYER RECIBE DAÑO (Capsule Collider del enemigo choca con Player).
     /// </summary>
     void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            // El collider del cuerpo del enemigo tocó al player
+            // El collider del cuerpo del enemigo (Capsule) tocó al player
             PlayerController playerController = collision.gameObject.GetComponent<PlayerController>();
             if (playerController != null)
             {
+                // El player pierde una vida
                 playerController.RecibirDano();
-                Debug.Log("Enemigo tocó al player. Player perdió 1 vida.");
+                Debug.Log("COLISIÓN FÍSICA: Enemy (Cuerpo) tocó al Player. Player pierde 1 vida.");
             }
         }
     }
     
     /// <summary>
-    /// Se ejecuta cuando el collider del cuerpo del enemigo (trigger) entra en contacto con el player.
-    /// IMPORTANTE: Este método solo se ejecuta si el collider del cuerpo es trigger.
-    /// Si el collider de detección tiene EnemyDetectionZone, este método no se activará para ese collider.
+    /// Se ejecuta cuando algo entra en el Trigger de detección (Circle Collider).
+    /// AQUÍ SOLO SE DETECTA AL PLAYER PARA PERSEGUIRLO, NO HACE DAÑO.
     /// </summary>
     void OnTriggerEnter2D(Collider2D other)
     {
-        // Solo procesar si NO es el collider de detección (ese tiene EnemyDetectionZone)
-        EnemyDetectionZone detectionZone = other.GetComponent<EnemyDetectionZone>();
-        if (detectionZone != null)
-        {
-            // Es el collider de detección, no hacer nada aquí
-            return;
-        }
-        
-        // Si es el player y el collider del cuerpo es trigger, causar daño
+        // Si el player entra en el área de detección (Circle Collider que es Trigger)
         if (other.CompareTag("Player"))
         {
-            PlayerController playerController = other.GetComponent<PlayerController>();
-            if (playerController != null)
+            // Solo cambiamos a estado de persecución
+            if (estadoActual == EstadoEnemigo.Patrullando)
             {
-                playerController.RecibirDano();
-                Debug.Log("Enemigo tocó al player (trigger). Player perdió 1 vida.");
+                estadoActual = EstadoEnemigo.Persiguiendo;
+                Debug.Log("DETECCIÓN: Player entró en rango de visión (Circle Collider).");
             }
         }
+        // NOTA: La linterna también usa triggers, pero su lógica está en LinternaController.cs,
+        // así que no necesitamos hacer nada aquí para recibir daño de la linterna.
     }
 }

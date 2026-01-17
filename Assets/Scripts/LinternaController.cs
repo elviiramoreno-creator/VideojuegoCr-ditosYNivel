@@ -18,8 +18,23 @@ public class LinternaController : MonoBehaviour
     private Vector3 direccionMouse;
     private float angulo;
 
+    [Header("Ajustes de Rotación")]
+    [Tooltip("Ajuste de ángulo si el sprite no apunta a la derecha por defecto. Si el sprite 'mira' hacia arriba, usa -90. Si mira a la derecha, usa 0.")]
+    [SerializeField] private float rotationOffset = -90f;
+
+    [Header("Configuración de Arma")]
+    [Tooltip("Si es true, este objeto hace daño a los enemigos. Desactívalo para luces decorativas como 'alumbrado personaje'.")]
+    [SerializeField] private bool esArmaLetal = true;
+
     void Start()
     {
+        // Auto-detectar si NO es la linterna (por ejemplo, "alumbrado personaje")
+        // Si el nombre contiene "alumbrado", desactivamos el daño automáticamente
+        if (gameObject.name.ToLower().Contains("alumbrado"))
+        {
+            esArmaLetal = false;
+        }
+
         // Buscar player si no está asignado
         if (player == null)
         {
@@ -64,15 +79,14 @@ public class LinternaController : MonoBehaviour
         angulo = Mathf.Atan2(direccionMouse.y, direccionMouse.x) * Mathf.Rad2Deg;
 
         // Rotar la linterna suavemente hacia el mouse (SOLO rotación, sin mover posición)
-        Quaternion rotacionDeseada = Quaternion.AngleAxis(angulo, Vector3.forward);
+        // Aplicamos el offset para corregir la orientación del sprite
+        Quaternion rotacionDeseada = Quaternion.AngleAxis(angulo + rotationOffset, Vector3.forward);
         transform.rotation = Quaternion.Slerp(transform.rotation, rotacionDeseada, velocidadRotacion * Time.deltaTime);
     }
 
     [Header("Sistema de Daño")]
-    [Tooltip("Con vida máxima de 100, un valor de 50 significa que el enemigo muere en 2 segundos de iluminación continua")]
-    [SerializeField] private float danoPorSegundo = 50f; // Daño que causa la linterna por segundo (gradual)
-    [Tooltip("Intervalo más pequeño = daño más gradual y suave")]
-    [SerializeField] private float intervaloDanos = 0.2f; // Intervalo entre cada aplicación de daño (más frecuente para ser gradual)
+    [Tooltip("Intervalo más pequeño = daño más frecuente. 1.0f = daño cada segundo.")]
+    [SerializeField] private float intervaloDanos = 1.0f; // Intervalo entre cada aplicación de daño
     
     private float tiempoUltimoDano = 0f;
     private EnemyController enemigoActual = null;
@@ -86,6 +100,13 @@ public class LinternaController : MonoBehaviour
     /// </summary>
     void OnTriggerEnter2D(Collider2D other)
     {
+        // Si no es un arma letal (ej. alumbrado decorativo), no hacemos nada
+        if (!esArmaLetal) return;
+        
+        // IMPORTANTE: Ignorar colliders que sean triggers (como el área de visión del enemigo)
+        // Solo queremos dañar si tocamos el CUERPO FÍSICO del enemigo.
+        if (other.isTrigger) return;
+
         if (other.CompareTag("Enemy"))
         {
             // El collider de la linterna está en contacto con un enemigo
@@ -100,20 +121,30 @@ public class LinternaController : MonoBehaviour
             {
                 enemigoActual = enemy;
                 tiempoUltimoDano = Time.time;
-                // Aplicar daño gradual inmediato cuando entra en contacto
-                float danoInicial = danoPorSegundo * intervaloDanos;
-                enemy.RecibirDano(danoInicial);
-                Debug.Log($"Linterna iluminó enemigo. Enemigo perdió {danoInicial:F1} de vida.");
+                
+                // Hacer que el enemigo huya de la luz
+                enemy.EmpezarHuir(transform.position);
+
+                // Aplicar daño del golpe
+                int dano = ObtenerFuerzaPlayer();
+                enemy.RecibirDano(dano);
+                // Debug.Log($"Linterna iluminó enemigo. Enemigo perdió {dano} de vida.");
             }
         }
     }
 
     /// <summary>
     /// Se ejecuta mientras un enemigo está dentro del collider de la linterna.
-    /// Aplica daño continuo mientras el enemigo está iluminado.
+    /// Aplica daño continuo (por intervalos) mientras el enemigo está iluminado.
     /// </summary>
     void OnTriggerStay2D(Collider2D other)
     {
+        // Si no es un arma letal (ej. alumbrado decorativo), no hacemos nada
+        if (!esArmaLetal) return;
+        
+        // IMPORTANTE: Ignorar colliders que sean triggers
+        if (other.isTrigger) return;
+
         if (other.CompareTag("Enemy"))
         {
             // Buscar EnemyController en el GameObject o en el padre
@@ -123,26 +154,48 @@ public class LinternaController : MonoBehaviour
                 enemy = other.GetComponentInParent<EnemyController>();
             }
             
-            if (enemy != null && enemy == enemigoActual)
+            if (enemy != null)
             {
-                // Aplicar daño gradual cada intervaloDanos segundos mientras está iluminado
-                if (Time.time - tiempoUltimoDano >= intervaloDanos)
+                // Actualizar la posición de la luz para que huya
+                enemy.ActualizarPosicionLuz(transform.position);
+
+                // Si cambiamos de enemigo o es el mismo
+                if (enemy != enemigoActual)
                 {
-                    float danoAplicado = danoPorSegundo * intervaloDanos;
-                    enemy.RecibirDano(danoAplicado);
-                    tiempoUltimoDano = Time.time;
-                    Debug.Log($"Linterna continua iluminando enemigo. Enemigo perdió {danoAplicado:F1} de vida.");
+                   enemigoActual = enemy;
+                   tiempoUltimoDano = Time.time;
+                   
+                   // Al cambiar, aseguramos que huya
+                   enemy.EmpezarHuir(transform.position);
+
+                   // Aplicar primer daño al cambiar de enemigo
+                   int dano = ObtenerFuerzaPlayer();
+                   enemy.RecibirDano(dano);
+                }
+                else
+                {
+                    // Es el mismo enemigo, comprobar intervalo
+                    if (Time.time - tiempoUltimoDano >= intervaloDanos)
+                    {
+                        int dano = ObtenerFuerzaPlayer();
+                        enemy.RecibirDano(dano);
+                        tiempoUltimoDano = Time.time;
+                        // Debug.Log($"Linterna continua iluminando enemigo. Enemigo perdió {dano} de vida.");
+                    }
                 }
             }
-            else if (enemy != null && enemy != enemigoActual)
-            {
-                // Si hay un enemigo diferente en el collider
-                enemigoActual = enemy;
-                tiempoUltimoDano = Time.time;
-                float danoAplicado = danoPorSegundo * intervaloDanos;
-                enemy.RecibirDano(danoAplicado);
-            }
         }
+    }
+
+    int ObtenerFuerzaPlayer()
+    {
+        if (player != null)
+        {
+            PlayerController pc = player.GetComponent<PlayerController>();
+            if (pc != null)
+                return pc.fuerzaGolpe;
+        }
+        return 15; // Valor por defecto si no se encuentra
     }
     
     /// <summary>
@@ -150,6 +203,12 @@ public class LinternaController : MonoBehaviour
     /// </summary>
     void OnTriggerExit2D(Collider2D other)
     {
+        // Si no es un arma letal, no hacemos nada
+        if (!esArmaLetal) return;
+        
+        // IMPORTANTE: Ignorar colliders que sean triggers
+        if (other.isTrigger) return;
+
         if (other.CompareTag("Enemy"))
         {
             // Buscar EnemyController en el GameObject o en el padre
@@ -159,10 +218,17 @@ public class LinternaController : MonoBehaviour
                 enemy = other.GetComponentInParent<EnemyController>();
             }
             
+            // Si el enemigo sale, dejar de huir
+            if (enemy != null)
+            {
+                // Solo dejamos de huir si salimos con el cuerpo
+                enemy.DejarDeHuir();
+            }
+
             if (enemy != null && enemy == enemigoActual)
             {
                 enemigoActual = null;
-                Debug.Log("Enemigo salió del rango de la linterna.");
+                // Debug.Log("Enemigo salió del rango de la linterna.");
             }
         }
     }

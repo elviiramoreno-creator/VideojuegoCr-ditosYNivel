@@ -54,7 +54,7 @@ public class HealthBarController : MonoBehaviour
                 GameObject fillObj = new GameObject("Fill");
                 fillObj.transform.SetParent(fondoObj.transform);
                 barraVidaFill = fillObj.AddComponent<Image>();
-                barraVidaFill.color = Color.red;
+                barraVidaFill.color = Color.green;
                 RectTransform fillRect = fillObj.GetComponent<RectTransform>();
                 fillRect.anchorMin = Vector2.zero;
                 fillRect.anchorMax = Vector2.one;
