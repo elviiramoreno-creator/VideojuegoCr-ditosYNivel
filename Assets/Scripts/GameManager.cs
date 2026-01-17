@@ -10,8 +10,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int enemigosAEsquivar = 15;
     [SerializeField] private int monedasARecoger = 10;
     
-    [Header("UI")]
-    [SerializeField] private TextMeshProUGUI textoContadorMonedas; // Referencia al texto del contador UI
+    [Header("UI Reference")]
+    [SerializeField] private HUDController hudController;
     
     [Header("Referencias")]
     [SerializeField] private Transform metaNivel;
@@ -21,6 +21,8 @@ public class GameManager : MonoBehaviour
     private int monedasRecogidas = 0;
     private bool nivelCompletado = false;
     
+    private int totalMonedasNivel = 0;
+
     void Awake()
     {
         // Singleton
@@ -33,6 +35,9 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+        
+        // Resetear total al iniciar (por si se recarga la escena)
+        totalMonedasNivel = 0;
     }
     
     void Start()
@@ -46,12 +51,42 @@ public class GameManager : MonoBehaviour
             if (metaObj != null)
                 metaNivel = metaObj.transform;
         }
+
+        // Buscar HUDController dinámicamente si no está asignado
+        if (hudController == null)
+        {
+            hudController = FindFirstObjectByType<HUDController>();
+        }
+        
+        // Contar todas las monedas que existen en la escena al inicio
+        ContarMonedasIniciales();
         
         ResetearContadores();
         
-        // Inicializar texto UI
-        if (textoContadorMonedas != null)
-            textoContadorMonedas.text = "0";
+        // Inicializar texto UI con lo que se haya registrado hasta ahora
+        ActualizarHUDMonedas();
+    }
+    
+    void ContarMonedasIniciales()
+    {
+        // Prioridad: Configuración manual en HUDController
+        if (hudController != null && hudController.monedasInicialesManuales > 0)
+        {
+            totalMonedasNivel = hudController.monedasInicialesManuales;
+            Debug.Log($"Usando configuración manual del HUD: {totalMonedasNivel} monedas.");
+        }
+        else
+        {
+            // Fallback: Contar automáticamente
+            // Busca todos los objetos activos con el componente Coin
+            Coin[] monedas = FindObjectsByType<Coin>(FindObjectsSortMode.None);
+            totalMonedasNivel = monedas.Length;
+            Debug.Log($"Monedas detectadas automáticamente: {totalMonedasNivel}");
+        }
+        
+        // Si usamos CoinSpawner, las monedas se generan después...
+        // Pero el CoinSpawner corre en Start también. 
+        // Para asegurar, CoinSpawner debería tener prioridad o llamar a recalcular.
     }
     
     void Update()
@@ -67,18 +102,37 @@ public class GameManager : MonoBehaviour
                 metaNivel = metaObj.transform;
         }
         
+        if (hudController == null)
+            hudController = FindFirstObjectByType<HUDController>();
+
         // La verificación de meta se hace mediante trigger en MetaNivel.cs
+    }
+    
+    // Método para sumar monedas generadas dinámicamente si fuera necesario
+    public void RegistrarNuevaMoneda()
+    {
+        totalMonedasNivel++;
+        ActualizarHUDMonedas();
     }
     
     public void RecogerMoneda(int valor)
     {
         monedasRecogidas += valor;
-        Debug.Log($"Monedas recogidas: {monedasRecogidas}/{monedasARecoger}");
+        Debug.Log($"Monedas recogidas: {monedasRecogidas}/{monedasARecoger}. Total en nivel: {totalMonedasNivel}");
         
         // Actualizar UI
-        if (textoContadorMonedas != null)
+        ActualizarHUDMonedas();
+    }
+    
+    private void ActualizarHUDMonedas()
+    {
+        if (hudController != null)
         {
-            textoContadorMonedas.text = monedasRecogidas.ToString();
+            // Mostrar monedas RESTANTES
+            int restantes = totalMonedasNivel - monedasRecogidas;
+            if (restantes < 0) restantes = 0;
+            
+            hudController.ActualizarContadorMonedas(restantes);
         }
     }
     
