@@ -280,25 +280,8 @@ public class EnemyController : MonoBehaviour
         Destroy(gameObject);
     }
 
-    void ActualizarEstado()
-    {
-        if (player == null) return;
-
-        // El estado ahora se actualiza mediante los colliders (OnTriggerEnter2D/Exit2D)
-        // Este método mantiene la lógica de distancia como respaldo
-        float distanciaAlPlayer = Vector3.Distance(transform.position, player.transform.position);
-
-        // Si el player está dentro del rango de detección, perseguirlo
-        if (distanciaAlPlayer <= distanciaPersecucion && estadoActual == EstadoEnemigo.Patrullando)
-        {
-            estadoActual = EstadoEnemigo.Persiguiendo;
-        }
-        // Si el player se aleja mucho, volver a patrullar
-        else if (distanciaAlPlayer > distanciaPersecucion * 1.5f && estadoActual == EstadoEnemigo.Persiguiendo)
-        {
-            estadoActual = EstadoEnemigo.Patrullando;
-        }
-    }
+    // El método ActualizarEstado ha sido eliminado ya que la lógica de cambio de estado
+    // ahora reside completamente en los eventos de Trigger (Entrada/Salida) para mayor precisión.
     
     void VerificarPlayerCerca()
     {
@@ -553,12 +536,24 @@ public class EnemyController : MonoBehaviour
     {
         if (estadoActual == EstadoEnemigo.Persiguiendo && player != null)
         {
-            // Solo volver a patrullar si el player está realmente lejos
-            float distanciaAlPlayer = Vector3.Distance(transform.position, player.transform.position);
-            if (distanciaAlPlayer > distanciaPersecucion * 1.5f)
+            // Volver a patrullar inmediatamente cuando sale del rango
+            estadoActual = EstadoEnemigo.Patrullando;
+            Debug.Log("Player salió del rango. Enemigo vuelve a patrullar.");
+        }
+    }
+    
+    /// <summary>
+    /// Se ejecuta cuando algo sale del Trigger de detección (Circle Collider).
+    /// </summary>
+    void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            // Si el player sale del trigger, dejar de perseguir
+            if (estadoActual == EstadoEnemigo.Persiguiendo)
             {
                 estadoActual = EstadoEnemigo.Patrullando;
-                Debug.Log("Player se alejó. Enemigo vuelve a patrullar.");
+                Debug.Log("DETECCIÓN: Player salió del rango de visión (Circle Collider).");
             }
         }
     }

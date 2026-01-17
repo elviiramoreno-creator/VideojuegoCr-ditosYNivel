@@ -2135,6 +2135,12 @@ MonoBehaviour:
   fuerzaGolpe: 15
   vidasMaximas: 3
   tiempoInvencibilidad: 1
+  imagenVida1: {fileID: 0}
+  imagenVida2: {fileID: 0}
+  imagenVida3: {fileID: 0}
+  textoContadorMonedas: {fileID: 0}
+  seguirConCamara: 1
+  suavizadoCamara: 5
   animator: {fileID: 172412137}
   rb: {fileID: 172412136}
   linterna: {fileID: 0}
@@ -68196,6 +68202,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemigosAEsquivar: 15
   monedasARecoger: 10
+  textoContadorMonedas: {fileID: 0}
   metaNivel: {fileID: 0}
   player: {fileID: 172412134}
 --- !u!4 &1317998089

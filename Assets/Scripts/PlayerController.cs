@@ -22,14 +22,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private int vidasMaximas = 3;
     [SerializeField] private float tiempoInvencibilidad = 1f; // Tiempo en el que el player no puede recibir daño tras ser golpeado
     
-    [Header("UI Vidas")]
-    [SerializeField] private GameObject imagenVida1;
-    [SerializeField] private GameObject imagenVida2;
-    [SerializeField] private GameObject imagenVida3;
-
-    [Header("UI Monedas")]
-    [SerializeField] private TextMeshProUGUI textoContadorMonedas;
-    private int monedasActuales = 0;
+    [Header("Referencias UI")]
+    [SerializeField] private HUDController hudController;
 
     [Header("Cámara")]
     [Tooltip("Activa esto para que la cámara siga al jugador suavemente.")]
@@ -69,6 +63,12 @@ public class PlayerController : MonoBehaviour
                 linterna = linternaTransform.gameObject;
         }
 
+        // Buscar HUDController si no está asignado
+        if (hudController == null)
+        {
+            hudController = FindFirstObjectByType<HUDController>();
+        }
+
         // Configuración Rigidbody2D
         // IMPORTANT: Usamos Dynamic para que se detecten las colisiones con el Enemigo (que es Kinematic)
         rb.gravityScale = 0f;
@@ -84,6 +84,10 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        // Buscar HUDController dinámicamente si se pierde
+        if (hudController == null)
+            hudController = FindFirstObjectByType<HUDController>();
+
         if (haLlegadoAMeta)
         {
             ActualizarAnimaciones(0f, 0f);
@@ -238,10 +242,10 @@ public class PlayerController : MonoBehaviour
     
     void ActualizarUI()
     {
-        // Activar/Desactivar imágenes según la vida actual
-        if (imagenVida1 != null) imagenVida1.SetActive(vidasActuales >= 1);
-        if (imagenVida2 != null) imagenVida2.SetActive(vidasActuales >= 2);
-        if (imagenVida3 != null) imagenVida3.SetActive(vidasActuales >= 3);
+        if (hudController != null)
+        {
+            hudController.ActualizarVidas(vidasActuales);
+        }
     }
 
     void Morir()
@@ -262,13 +266,7 @@ public class PlayerController : MonoBehaviour
 
     public void AnadirMoneda(int cantidad)
     {
-        monedasActuales += cantidad;
-        
-        // Actualizar UI
-        if (textoContadorMonedas != null)
-        {
-            textoContadorMonedas.text = monedasActuales.ToString();
-        }
+        // La UI ahora es manejada por el GameManager
         
         // Notificar al GameManager para el progreso del nivel
         if (GameManager.Instance != null)
