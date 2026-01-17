@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class PlayerController : MonoBehaviour
 {
@@ -20,6 +21,21 @@ public class PlayerController : MonoBehaviour
     [Header("Sistema de Vidas")]
     [SerializeField] private int vidasMaximas = 3;
     [SerializeField] private float tiempoInvencibilidad = 1f; // Tiempo en el que el player no puede recibir daño tras ser golpeado
+    
+    [Header("UI Vidas")]
+    [SerializeField] private GameObject imagenVida1;
+    [SerializeField] private GameObject imagenVida2;
+    [SerializeField] private GameObject imagenVida3;
+
+    [Header("UI Monedas")]
+    [SerializeField] private TextMeshProUGUI textoContadorMonedas;
+    private int monedasActuales = 0;
+
+    [Header("Cámara")]
+    [Tooltip("Activa esto para que la cámara siga al jugador suavemente.")]
+    [SerializeField] private bool seguirConCamara = true;
+    [SerializeField] private float suavizadoCamara = 5f;
+    private Camera camaraPrincipal;
 
     [Header("Referencias")]
     [SerializeField] private Animator animator;
@@ -41,6 +57,9 @@ public class PlayerController : MonoBehaviour
         if (animator == null)
             animator = GetComponent<Animator>();
 
+        // Buscar cámara principal
+        camaraPrincipal = Camera.main;
+
         // Buscar linterna si no está asignada
         if (linterna == null)
         {
@@ -58,7 +77,10 @@ public class PlayerController : MonoBehaviour
 
         // Inicializar vidas
         vidasActuales = vidasMaximas;
+        ActualizarUI();
     }
+    
+    // ... (Métodos de Update y Movimiento sin cambios) ...
 
     void Update()
     {
@@ -107,6 +129,21 @@ public class PlayerController : MonoBehaviour
 
         ActualizarAnimaciones(inputHorizontal, inputVertical);
     }
+
+    void LateUpdate()
+    {
+        if (seguirConCamara && camaraPrincipal != null)
+        {
+            // Posición deseada: Player con Z = -10
+            Vector3 posicionDeseada = transform.position;
+            posicionDeseada.z = -10f; 
+            
+            // Movimiento suave
+            camaraPrincipal.transform.position = Vector3.Lerp(camaraPrincipal.transform.position, posicionDeseada, suavizadoCamara * Time.deltaTime);
+        }
+    }
+    
+    // ... (Resto de métodos hasta RecibirDano) ...
 
     // =======================
     // TILEMAP DETECTOR
@@ -184,6 +221,9 @@ public class PlayerController : MonoBehaviour
         vidasActuales--;
         Debug.Log($"Player recibió daño! Vidas restantes: {vidasActuales}/{vidasMaximas}");
 
+        // Actualizar UI de vidas
+        ActualizarUI();
+
         // Activar invencibilidad temporal
         esInvencible = true;
         tiempoInvencibilidadRestante = tiempoInvencibilidad;
@@ -195,10 +235,19 @@ public class PlayerController : MonoBehaviour
             Morir();
         }
     }
+    
+    void ActualizarUI()
+    {
+        // Activar/Desactivar imágenes según la vida actual
+        if (imagenVida1 != null) imagenVida1.SetActive(vidasActuales >= 1);
+        if (imagenVida2 != null) imagenVida2.SetActive(vidasActuales >= 2);
+        if (imagenVida3 != null) imagenVida3.SetActive(vidasActuales >= 3);
+    }
 
     void Morir()
     {
         vidasActuales = 0;
+        ActualizarUI();
         
         // Intentar usar GameManager, si falla, reiniciar directamente
         if (GameManager.Instance != null)
@@ -208,6 +257,23 @@ public class PlayerController : MonoBehaviour
         else
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
+    }
+
+    public void AnadirMoneda(int cantidad)
+    {
+        monedasActuales += cantidad;
+        
+        // Actualizar UI
+        if (textoContadorMonedas != null)
+        {
+            textoContadorMonedas.text = monedasActuales.ToString();
+        }
+        
+        // Notificar al GameManager para el progreso del nivel
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.RecogerMoneda(cantidad);
         }
     }
 

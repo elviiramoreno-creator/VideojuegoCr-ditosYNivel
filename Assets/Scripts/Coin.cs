@@ -48,12 +48,7 @@ public class Coin : MonoBehaviour
     {
         if (other.CompareTag("Player") && !recogida)
         {
-            // Verificar distancia antes de recoger
-            float distancia = Vector3.Distance(transform.position, other.transform.position);
-            if (distancia <= distanciaMinimaRecogida)
-            {
-                Recoger();
-            }
+            Recoger();
         }
     }
     void Recoger()
@@ -62,8 +57,21 @@ public class Coin : MonoBehaviour
         
         recogida = true;
         
-        // Notificar al GameManager
-        GameManager.Instance?.RecogerMoneda(valorMoneda);
+        // Buscar el Player y añadir moneda
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            PlayerController controller = player.GetComponent<PlayerController>();
+            if (controller != null)
+            {
+                controller.AnadirMoneda(valorMoneda);
+            }
+        }
+        else
+        {
+            // Fallback por si no encuentra al player (no debería pasar)
+            GameManager.Instance?.RecogerMoneda(valorMoneda);
+        }
         
         // Efecto visual/sonido (opcional)
         // Aquí podrías agregar una animación o sonido

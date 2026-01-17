@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class GameManager : MonoBehaviour
 {
@@ -8,6 +9,9 @@ public class GameManager : MonoBehaviour
     [Header("Objetivos del Nivel")]
     [SerializeField] private int enemigosAEsquivar = 15;
     [SerializeField] private int monedasARecoger = 10;
+    
+    [Header("UI")]
+    [SerializeField] private TextMeshProUGUI textoContadorMonedas; // Referencia al texto del contador UI
     
     [Header("Referencias")]
     [SerializeField] private Transform metaNivel;
@@ -44,6 +48,10 @@ public class GameManager : MonoBehaviour
         }
         
         ResetearContadores();
+        
+        // Inicializar texto UI
+        if (textoContadorMonedas != null)
+            textoContadorMonedas.text = "0";
     }
     
     void Update()
@@ -66,6 +74,12 @@ public class GameManager : MonoBehaviour
     {
         monedasRecogidas += valor;
         Debug.Log($"Monedas recogidas: {monedasRecogidas}/{monedasARecoger}");
+        
+        // Actualizar UI
+        if (textoContadorMonedas != null)
+        {
+            textoContadorMonedas.text = monedasRecogidas.ToString();
+        }
     }
     
     public void EsquivarEnemigo()
