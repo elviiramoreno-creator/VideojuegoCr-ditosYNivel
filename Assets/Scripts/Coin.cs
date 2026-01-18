@@ -18,11 +18,8 @@ public class Coin : MonoBehaviour
             coinCollider.isTrigger = true;
         }
         
-        // Registrar moneda en el GameManager
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.RegistrarTotalMonedas(1);
-        }
+        // Registro manual en GameManager ahora (por petición de usuario)
+        // if (GameManager.Instance != null) { GameManager.Instance.RegistrarTotalMonedas(1); }
     }
     
     void Update()

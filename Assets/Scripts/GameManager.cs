@@ -22,6 +22,8 @@ public class GameManager : MonoBehaviour
     [Header("Referencias")]
     [SerializeField] private Transform metaNivel;
     [SerializeField] private GameObject player;
+    [Header("Referencias UI")]
+    [SerializeField] private GameObject panelGamePlay;
     [SerializeField] private GameOverManager gameOverManager;
     [SerializeField] private WinManager winManager;
     
@@ -47,6 +49,11 @@ public class GameManager : MonoBehaviour
     
     void Start()
     {
+        // ASEGURAR QUE EL JUEGO NO ESTÁ PAUSADO
+        Time.timeScale = 1f;
+
+        Debug.Log("<color=green>GameManager: START ejecutándose. Buscando componentes...</color>");
+
         if (player == null)
             player = GameObject.FindGameObjectWithTag("Player");
         
@@ -55,59 +62,49 @@ public class GameManager : MonoBehaviour
             GameObject metaObj = GameObject.Find("MetaNivel");
             if (metaObj != null)
                 metaNivel = metaObj.transform;
+        }
+
+        // 1. Configurar Panel GamePlay (activarlo al inicio)
+        if (panelGamePlay == null)
+        {
+            panelGamePlay = GameObject.Find("panel_GamePlay");
+            if (panelGamePlay == null) panelGamePlay = GameObject.Find("Panel_GamePlay");
+        }
+
+        if (panelGamePlay != null)
+        {
+            panelGamePlay.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning("GameManager: No se encontró 'panel_GamePlay'. Asegúrate de que existe en el Canvas.");
         }
         
         // Buscar GameOverManager si no está asignado
         if (gameOverManager == null)
         {
             gameOverManager = FindFirstObjectByType<GameOverManager>();
-            if (gameOverManager == null)
-            {
-                // Crear GameOverManager automáticamente
-                GameObject gameOverObj = new GameObject("GameOverManager");
-                gameOverManager = gameOverObj.AddComponent<GameOverManager>();
-            }
+            // ... (omitimos creación automática para no ensuciar, mejor que avise si falta)
         }
         
         // Buscar WinManager si no está asignado
         if (winManager == null)
         {
             winManager = FindFirstObjectByType<WinManager>();
-            if (winManager == null)
-            {
-                // Crear WinManager automáticamente
-                GameObject winObj = new GameObject("WinManager");
-                winManager = winObj.AddComponent<WinManager>();
-            }
         }
         
         // Contar objetivos del nivel
         ContarObjetivosDelNivel();
         
         ResetearContadores();
-        
-        // Asegurar que panel_GamePlay está activo
-        GameObject panelGamePlay = GameObject.Find("panel_GamePlay");
-        if (panelGamePlay != null)
-        {
-            panelGamePlay.SetActive(true);
-        }
     }
     
     void Update()
     {
-        // Buscar referencias si no están asignadas
-        if (player == null)
+        // Optimización: No buscar cada frame, solo si es nulo y cada cierto tiempo (opcional)
+        // Por ahora lo dejamos simple para asegurar que lo encuentra, pero cuidado con el rendimiento.
+        if (player == null && Time.frameCount % 60 == 0) // Buscar solo una vez por segundo (aprox)
             player = GameObject.FindGameObjectWithTag("Player");
-        
-        if (metaNivel == null)
-        {
-            GameObject metaObj = GameObject.Find("MetaNivel");
-            if (metaObj != null)
-                metaNivel = metaObj.transform;
-        }
-        
-        // La verificación de meta se hace mediante trigger en MetaNivel.cs
     }
     
     public void RecogerMoneda(int valor)
@@ -136,27 +133,38 @@ public class GameManager : MonoBehaviour
     
     void ContarObjetivosDelNivel()
     {
-        // Contar enemigos en la escena si no está configurado manualmente
+        // Contar enemigos
         if (enemigosAEliminar <= 0)
         {
             EnemyController[] enemigos = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
             totalEnemigosEnNivel = enemigos.Length;
-            Debug.Log($"Enemigos detectados en el nivel: {totalEnemigosEnNivel}");
         }
         else
         {
             totalEnemigosEnNivel = enemigosAEliminar;
         }
         
-        // El conteo de monedas ahora se hace dinámicamente cuando las monedas se registran al iniciar (Coin.Start)
-        // Esto soluciona problemas con monedas generadas por Spawners
-        Debug.Log("Esperando registro de monedas...");
+        // RECUENTO DE MONEDAS EN EL INSPECTOR AL INICIO (Petición usuario: Por Tag "Moneda")
+        try
+        {
+            GameObject[] monedasPorTag = GameObject.FindGameObjectsWithTag("Moneda");
+            totalMonedasEnNivel = monedasPorTag.Length;
+            Debug.Log($"<color=yellow>---> RECUENTO INICIAL: Se han detectado {totalMonedasEnNivel} objetos con el tag 'Moneda' en la escena. <---</color>");
+        }
+        catch (UnityException)
+        {
+            Debug.LogError("GameManager: Error al buscar por Tag 'Moneda'. Asegúrate de que el Tag existe en Project Settings.");
+            // Fallback: Buscar por tipo Coin
+            Coin[] monedasComponente = FindObjectsByType<Coin>(FindObjectsSortMode.None);
+            totalMonedasEnNivel = monedasComponente.Length;
+        }
     }
 
     public void RegistrarTotalMonedas(int cantidad)
     {
+        // Mantener por si se generan monedas dinámicamente después del Start
         totalMonedasEnNivel += cantidad;
-        Debug.Log($"Moneda registrada. Total monedas a recoger: {totalMonedasEnNivel}");
+        Debug.Log($"Moneda extra registrada. Total monedas a recoger: {totalMonedasEnNivel}");
     }
     
     void VerificarVictoria()
@@ -165,7 +173,6 @@ public class GameManager : MonoBehaviour
         
         // Verificar si se han cumplido TODOS los objetivos
         bool todasLasMonedasRecogidas = (monedasRecogidas >= totalMonedasEnNivel);
-        // bool todosLosEnemigosEliminados = (enemigosEliminados >= totalEnemigosEnNivel); // Desactivado por requisito del usuario
         
         if (todasLasMonedasRecogidas)
         {
@@ -180,19 +187,21 @@ public class GameManager : MonoBehaviour
         nivelCompletado = true;
         Debug.Log("¡VICTORIA! Has completado todos los objetivos del nivel.");
         
+        // DESACTIVAR HUD
+        if (panelGamePlay != null) panelGamePlay.SetActive(false);
+
         if (winManager != null)
         {
             winManager.ShowWin();
-        }
-        else
-        {
-            Debug.LogWarning("WinManager no encontrado. No se puede mostrar el panel de victoria.");
         }
     }
     
     public void GameOver()
     {
         Debug.Log("Game Over!");
+        
+        // DESACTIVAR HUD
+        if (panelGamePlay != null) panelGamePlay.SetActive(false);
         
         if (gameOverManager == null)
             gameOverManager = FindFirstObjectByType<GameOverManager>();
@@ -203,9 +212,8 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("GameManager: ¡No existe GameOverManager! Reiniciando nivel como fallback.");
-            // Fallback: reiniciar inmediatamente si no hay GameOverManager
-            ReiniciarNivel();
+            // Fallback
+             ReiniciarNivel();
         }
     }
     
