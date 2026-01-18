@@ -273,4 +273,22 @@ public class GameManager : MonoBehaviour
             Debug.Log($"Faltan {totalMonedasEnNivel - monedasRecogidas} monedas");
         }
     }
+
+    /// <summary>
+    /// Función manual para asignar en botones desde el Inspector e ir al Menú.
+    /// </summary>
+    public void CargarMenuPrincipal()
+    {
+        Time.timeScale = 1f; // Importante desbloquear tiempo
+        SceneManager.LoadScene("Menu"); 
+    }
+
+    /// <summary>
+    /// Función manual para salir del juego.
+    /// </summary>
+    public void SalirJuego()
+    {
+        Debug.Log("Saliendo del juego...");
+        Application.Quit();
+    }
 }

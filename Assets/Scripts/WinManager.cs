@@ -17,54 +17,73 @@ public class WinManager : MonoBehaviour
         // Buscar panel si no está asignado
         if (winPanel == null)
         {
-            winPanel = GameObject.Find("Panel_Win");
-            if (winPanel == null)
-            {
-                // Intentar buscar incluso si está desactivado
-                winPanel = FindInactiveGameObjectByName("Panel_Win");
-            }
-            if (winPanel == null)
-            {
-                winPanel = GameObject.Find("WinPanel");
-            }
+            winPanel = GameObject.FindGameObjectWithTag("MenuWin"); // Tag Request support
+            if (winPanel == null) winPanel = GameObject.Find("Panel_Win");
+            if (winPanel == null) winPanel = FindInactiveGameObjectByName("Panel_Win");
+            if (winPanel == null) winPanel = GameObject.Find("WinPanel");
         }
         
         // Ocultar panel al inicio
         if (winPanel != null)
         {
             winPanel.SetActive(false);
+            // Configurar botones recursivamente
+            ConfigurarBotones(winPanel);
         }
         else
         {
             Debug.LogWarning("WinManager: No se encontró el Panel_Win. Asegúrate de que existe en la escena.");
         }
-        
-        // Configurar botón Exit
-        if (exitButton == null && winPanel != null)
+    }
+
+    void ConfigurarBotones(GameObject panel)
+    {
+        // Configurar botón Exit (Búsqueda robusta)
+        if (exitButton == null)
         {
-            // Intentar buscar el botón en los hijos del panel
-            Transform exitTrans = winPanel.transform.Find("Exit");
-            if (exitTrans == null) exitTrans = winPanel.transform.Find("ExitButton");
-            if (exitTrans == null) exitTrans = winPanel.transform.Find("BotonExit");
+            Transform t = FindRecursive(panel.transform, "Exit");
+            if (t == null) t = FindRecursive(panel.transform, "ExitButton");
+            if (t == null) t = FindRecursive(panel.transform, "BotonExit");
+            if (t == null) t = FindRecursive(panel.transform, "Quit");
             
-            if (exitTrans != null)
-            {
-                exitButton = exitTrans.GetComponent<Button>();
-            }
+            if (t != null) exitButton = t.GetComponent<Button>();
         }
 
         if (exitButton != null)
         {
-            exitButton.onClick.RemoveAllListeners(); // Limpiar listeners previos para evitar duplicados
+            exitButton.onClick.RemoveAllListeners(); 
             exitButton.onClick.AddListener(ExitToMenu);
+            Debug.Log("WinManager: Botón Exit configurado.");
         }
         
-        // Configurar botón Continue (si existe)
+        // Configurar botón Continue
+        if (continueButton == null)
+        {
+            Transform t = FindRecursive(panel.transform, "Continue");
+            if (t == null) t = FindRecursive(panel.transform, "ContinueButton");
+            if (t == null) t = FindRecursive(panel.transform, "NextLevel");
+            if (t != null) continueButton = t.GetComponent<Button>();
+        }
+
         if (continueButton != null)
         {
             continueButton.onClick.RemoveAllListeners();
             continueButton.onClick.AddListener(ContinueToNextLevel);
+            Debug.Log("WinManager: Botón Continue configurado.");
         }
+    }
+
+    Transform FindRecursive(Transform parent, string name)
+    {
+        foreach (Transform child in parent)
+        {
+            if (child.name.Equals(name, System.StringComparison.OrdinalIgnoreCase) || child.name.Contains(name))
+                return child;
+            
+            Transform result = FindRecursive(child, name);
+            if (result != null) return result;
+        }
+        return null;
     }
     
     public void ShowWin()

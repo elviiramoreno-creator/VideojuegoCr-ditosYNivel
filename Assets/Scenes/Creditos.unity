@@ -154,7 +154,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 19, y: -169}
+  m_AnchoredPosition: {x: 11, y: -169}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &294802613
@@ -200,7 +200,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 294802614}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2102742067}
+        m_TargetAssemblyTypeName: CreditosEscena, Assembly-CSharp
+        m_MethodName: VolverAlMenu
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &294802614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -298,12 +310,12 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'CREDITS:
 
-    Elvira    Moreno
+    Desarrolladora: Elvira    Moreno
 
-    Betania    Pereira
+    UI-PM: Betania   
+    Pereira
 
-    Jose   MarIa   
-    HernAndez'
+    UX-QA: Jose   MarIa    HernAndez'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: be2e49ed5609e2c448856b75c089f334, type: 2}
   m_sharedMaterial: {fileID: 6473770972828609478, guid: be2e49ed5609e2c448856b75c089f334, type: 2}
@@ -330,8 +342,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 32
-  m_fontSizeBase: 32
+  m_fontSize: 25
+  m_fontSizeBase: 25
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

@@ -13,8 +13,16 @@ public class CreditosEscena : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            Debug.Log("Volviendo al menú principal...");
-            SceneManager.LoadScene("Menu");
+            VolverAlMenu();
         }
+    }
+
+    /// <summary>
+    /// Función para asignar al botón Exit en la escena de Créditos
+    /// </summary>
+    public void VolverAlMenu()
+    {
+        Debug.Log("Volviendo al menú principal...");
+        SceneManager.LoadScene("Menu");
     }
 }
