@@ -1,6 +1,10 @@
 fileFormatVersion: 2
-guid: 0a37e2987d5e4144cb1ba26e85eb2b99
+<<<<<<< Updated upstream:Assets/New Folder.meta
+guid: 86b7698e5ed1cc34590f710785324fed
 folderAsset: yes
+=======
+guid: bf77485ef1f5a654dabda755e1c6ed9d
+>>>>>>> Stashed changes:Assets/Scenes/NivelExtra.unity.meta
 DefaultImporter:
   externalObjects: {}
   userData: 
