@@ -1,10 +1,16 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
+using System;
 
 public class GameManager : MonoBehaviour
 {
+    // Singleton
     public static GameManager Instance { get; private set; }
+    
+    // Eventos para ScoreUI (necesitas estos)
+    public static event Action OnMonedaRecogida;
+    public static event Action OnEnemigoEsquivado;
     
     [Header("Objetivos del Nivel")]
     [SerializeField] private int enemigosAEsquivar = 15;
@@ -122,6 +128,9 @@ public class GameManager : MonoBehaviour
         
         // Actualizar UI
         ActualizarHUDMonedas();
+        
+        // Disparar evento para otros sistemas
+        OnMonedaRecogida?.Invoke();
     }
     
     private void ActualizarHUDMonedas()
@@ -140,6 +149,9 @@ public class GameManager : MonoBehaviour
     {
         enemigosEsquivados++;
         Debug.Log($"Enemigos esquivados: {enemigosEsquivados}/{enemigosAEsquivar}");
+        
+        // 🔥 DISPARAR EVENTO para ScoreUI
+        OnEnemigoEsquivado?.Invoke();
     }
     
     public void VerificarMetaNivel()
@@ -172,6 +184,20 @@ public class GameManager : MonoBehaviour
         Debug.Log("Reiniciando nivel...");
         ResetearContadores();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+    
+    // 🔥 MÉTODO QUE FALTA: GameOver()
+    public void GameOver()
+    {
+        Debug.Log("¡Game Over! El jugador ha muerto.");
+        
+        // Aquí puedes:
+        // 1. Mostrar pantalla de Game Over
+        // 2. Parar el juego
+        // 3. Permitir reiniciar
+        
+        // Por ahora, simplemente reiniciamos el nivel
+        ReiniciarNivel();
     }
     
     void ResetearContadores()
