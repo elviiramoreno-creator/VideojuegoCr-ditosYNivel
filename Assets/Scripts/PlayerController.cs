@@ -124,6 +124,12 @@ public class PlayerController : MonoBehaviour
         // Calcular nueva posición
         Vector2 nuevaPosicion = rb.position + velocidadFinal * Time.deltaTime;
 
+        // Debug temporal para verificar movimiento
+        if (direccionMovimiento.magnitude > 0.1f)
+        {
+            // Debug.Log($"Input: {direccionMovimiento}, VelFinal: {velocidadFinal}, TimeScale: {Time.timeScale}");
+        }
+
         // Aplicar movimiento usando Rigidbody2D para movimiento fluido
         rb.MovePosition(nuevaPosicion);
 
@@ -170,14 +176,19 @@ public class PlayerController : MonoBehaviour
     }
 
     // 
+    // 
     // ANIMACIONES
     //
     void ActualizarAnimaciones(float inputHorizontal, float inputVertical)
     {
         if (animator == null) return;
 
-        float velocidadMagnitud = Mathf.Abs(inputHorizontal) + Mathf.Abs(inputVertical);
-        bool estaMoviendo = velocidadMagnitud > 0.1f;
+        // Calcular magnitud de velocidad
+        float velocidadMagnitud = new Vector2(inputHorizontal, inputVertical).magnitude;
+        bool estaMoviendo = velocidadMagnitud > 0.01f;
+
+        // DEBUG: Descomentar si falla
+        if (estaMoviendo) Debug.Log($"Vel: {velocidadMagnitud} | X: {inputHorizontal} | Y: {inputVertical}");
 
         if (TieneParametro("run"))
             animator.SetBool("run", estaMoviendo && !haLlegadoAMeta);
@@ -189,14 +200,20 @@ public class PlayerController : MonoBehaviour
         }
 
         // Si el animator tiene parámetros de movimiento vertical
-        if (TieneParametro("MovimientoX"))
+        if (estaMoviendo && TieneParametro("MovimientoX"))
             animator.SetFloat("MovimientoX", inputHorizontal);
-       
-        if (TieneParametro("MovimientoY"))
+        
+        if (estaMoviendo && TieneParametro("MovimientoY"))
             animator.SetFloat("MovimientoY", inputVertical);
-       
+        
         if (TieneParametro("Velocidad"))
+        {
             animator.SetFloat("Velocidad", velocidadMagnitud);
+        }
+        else
+        {
+             // Debug.LogWarning("Animator: Falta parámetro 'Velocidad'");
+        }
     }
 
     bool TieneParametro(string nombre)
