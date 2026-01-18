@@ -276,6 +276,13 @@ public class EnemyController : MonoBehaviour
     void Morir()
     {
         Debug.Log("Enemigo muerto.");
+        
+        // Notificar al GameManager que un enemigo fue eliminado
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.EliminarEnemigo();
+        }
+        
         // Destruir el enemigo
         Destroy(gameObject);
     }

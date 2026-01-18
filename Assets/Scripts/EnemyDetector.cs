@@ -51,7 +51,10 @@ public class EnemyDetector : MonoBehaviour
                 if (player.position.y > enemigo.transform.position.y && distancia >= distanciaMinima)
                 {
                     enemigosDetectados[enemigo] = true;
-                    GameManager.Instance?.EsquivarEnemigo();
+                    // NOTA: Este sistema ya no se usa. Ahora el objetivo es ELIMINAR enemigos, no esquivarlos.
+                    // Si quieres que esquivar enemigos dé puntos, descomenta la siguiente línea
+                    // y añade el método EsquivarEnemigo() de vuelta al GameManager
+                    // GameManager.Instance?.EsquivarEnemigo();
                 }
             }
         }

@@ -256,7 +256,7 @@ public class PlayerController : MonoBehaviour
         // Intentar usar GameManager, si falla, reiniciar directamente
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.ReiniciarNivel();
+            GameManager.Instance.GameOver();
         }
         else
         {

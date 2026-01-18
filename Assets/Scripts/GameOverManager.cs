@@ -14,56 +14,123 @@ public class GameOverManager : MonoBehaviour
     
     void Start()
     {
-        // Si no hay panel asignado, buscarlo o crearlo
+        // Initial search
         if (gameOverPanel == null)
         {
-            gameOverPanel = GameObject.Find("GameOverPanel");
+            // 1. Try direct find (active only)
+            gameOverPanel = GameObject.Find("panel_gameOver");
+            if (gameOverPanel == null) gameOverPanel = GameObject.Find("Panel_GameOver");
+            if (gameOverPanel == null) gameOverPanel = GameObject.Find("GameOverPanel");
+            
+            // 2. Try inactive find
             if (gameOverPanel == null)
             {
-                CrearGameOverUI();
+                gameOverPanel = FindInactiveGameObjectByName("panel_gameOver");
+                if (gameOverPanel == null) gameOverPanel = FindInactiveGameObjectByName("Panel_GameOver");
+                if (gameOverPanel == null) gameOverPanel = FindInactiveGameObjectByName("GameOverPanel");
             }
         }
         
-        // Ocultar panel al inicio
+        // Log status
         if (gameOverPanel != null)
         {
-            gameOverPanel.SetActive(false);
+            Debug.Log($"GameOverManager: Panel encontrado correctamente: {gameOverPanel.name}");
+            gameOverPanel.SetActive(false); // Hide on start
+            
+            // Find buttons inside this specific panel
+            SetupButtons(gameOverPanel);
         }
-        
-        // Configurar botones
-        if (restartButton != null)
+        else
         {
-            restartButton.onClick.AddListener(RestartGame);
-        }
-        
-        if (exitButton != null)
-        {
-            exitButton.onClick.AddListener(ExitToMenu);
+            Debug.LogError("GameOverManager: ¡CRÍTICO! No se encuentra 'panel_gameOver'. Asegúrate de que existe en el Canvas.");
         }
     }
     
+    void SetupButtons(GameObject panel)
+    {
+         // Restart Button
+         if (restartButton == null)
+         {
+             Transform t = FindRecursive(panel.transform, "Restart");
+             if (t == null) t = FindRecursive(panel.transform, "RestartButton");
+             if (t == null) t = FindRecursive(panel.transform, "BotonRestart");
+             if (t != null) restartButton = t.GetComponent<Button>();
+         }
+         
+         // Exit Button
+         if (exitButton == null)
+         {
+             Transform t = FindRecursive(panel.transform, "Exit");
+             if (t == null) t = FindRecursive(panel.transform, "ExitButton");
+             if (t == null) t = FindRecursive(panel.transform, "BotonExit");
+             if (t == null) t = FindRecursive(panel.transform, "Quit");
+             if (t != null) exitButton = t.GetComponent<Button>();
+         }
+
+         // Bind listeners
+         if (restartButton != null)
+         {
+             restartButton.onClick.RemoveAllListeners();
+             restartButton.onClick.AddListener(RestartGame);
+         }
+         if (exitButton != null)
+         {
+             exitButton.onClick.RemoveAllListeners();
+             exitButton.onClick.AddListener(ExitToMenu);
+         }
+    }
+
+    Transform FindRecursive(Transform parent, string name)
+    {
+        foreach (Transform child in parent)
+        {
+            if (child.name.Equals(name, System.StringComparison.OrdinalIgnoreCase) || child.name.Contains(name))
+                return child;
+            
+            Transform result = FindRecursive(child, name);
+            if (result != null) return result;
+        }
+        return null;
+    }
+
     public void ShowGameOver()
     {
         if (gameOverActive) return;
         
+        Debug.Log("GameOverManager: ShowGameOver() llamado.");
         gameOverActive = true;
-        Time.timeScale = 0f; // Pausar el juego
+        Time.timeScale = 0f; 
         
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
+            gameOverPanel.transform.SetAsLastSibling(); // Ensure it's on top
         }
         else
         {
-            // Intentar encontrar de nuevo
-            gameOverPanel = GameObject.Find("GameOverPanel");
+            Debug.LogError("GameOverManager: No hay panel para mostrar. Intentando buscar de emergencia...");
+            gameOverPanel = FindInactiveGameObjectByName("panel_gameOver");
             if (gameOverPanel != null)
             {
                 gameOverPanel.SetActive(true);
+                gameOverPanel.transform.SetAsLastSibling();
             }
         }
     }
-    
+
+    // Helper para encontrar objetos desactivados
+    GameObject FindInactiveGameObjectByName(string name)
+    {
+        GameObject[] objs = Resources.FindObjectsOfTypeAll<GameObject>();
+        foreach (GameObject obj in objs)
+        {
+            if (obj.name == name && obj.scene.IsValid())
+            {
+                return obj;
+            }
+        }
+        return null;
+    }
     public void RestartGame()
     {
         Time.timeScale = 1f; // Restaurar tiempo
@@ -93,105 +160,6 @@ public class GameOverManager : MonoBehaviour
                 SceneManager.LoadScene(0);
             }
         }
-    }
-    
-    void CrearGameOverUI()
-    {
-        // Crear Canvas si no existe
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null)
-        {
-            GameObject canvasObj = new GameObject("Canvas");
-            canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>();
-            canvasObj.AddComponent<GraphicRaycaster>();
-        }
-        
-        // Crear Panel de GameOver
-        gameOverPanel = new GameObject("GameOverPanel");
-        gameOverPanel.transform.SetParent(canvas.transform, false);
-        Image panelImage = gameOverPanel.AddComponent<Image>();
-        panelImage.color = new Color(0, 0, 0, 0.8f); // Fondo oscuro semi-transparente
-        
-        RectTransform panelRect = gameOverPanel.GetComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.sizeDelta = Vector2.zero;
-        
-        // Crear texto "Game Over"
-        GameObject gameOverText = new GameObject("GameOverText");
-        gameOverText.transform.SetParent(gameOverPanel.transform, false);
-        Text textComponent = gameOverText.AddComponent<Text>();
-        textComponent.text = "GAME OVER";
-        textComponent.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        textComponent.fontSize = 72;
-        textComponent.alignment = TextAnchor.MiddleCenter;
-        textComponent.color = Color.white;
-        
-        RectTransform textRect = gameOverText.GetComponent<RectTransform>();
-        textRect.anchorMin = new Vector2(0.5f, 0.7f);
-        textRect.anchorMax = new Vector2(0.5f, 0.7f);
-        textRect.sizeDelta = new Vector2(400, 100);
-        textRect.anchoredPosition = Vector2.zero;
-        
-        // Crear botón Restart
-        GameObject restartObj = new GameObject("RestartButton");
-        restartObj.transform.SetParent(gameOverPanel.transform, false);
-        restartButton = restartObj.AddComponent<Button>();
-        Image restartImage = restartObj.AddComponent<Image>();
-        restartImage.color = new Color(0.2f, 0.8f, 0.2f); // Verde
-        
-        GameObject restartTextObj = new GameObject("Text");
-        restartTextObj.transform.SetParent(restartObj.transform, false);
-        Text restartText = restartTextObj.AddComponent<Text>();
-        restartText.text = "RESTART";
-        restartText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        restartText.fontSize = 36;
-        restartText.alignment = TextAnchor.MiddleCenter;
-        restartText.color = Color.white;
-        
-        RectTransform restartRect = restartObj.GetComponent<RectTransform>();
-        restartRect.anchorMin = new Vector2(0.5f, 0.4f);
-        restartRect.anchorMax = new Vector2(0.5f, 0.4f);
-        restartRect.sizeDelta = new Vector2(200, 60);
-        restartRect.anchoredPosition = Vector2.zero;
-        
-        RectTransform restartTextRect = restartTextObj.GetComponent<RectTransform>();
-        restartTextRect.anchorMin = Vector2.zero;
-        restartTextRect.anchorMax = Vector2.one;
-        restartTextRect.sizeDelta = Vector2.zero;
-        
-        // Crear botón Exit
-        GameObject exitObj = new GameObject("ExitButton");
-        exitObj.transform.SetParent(gameOverPanel.transform, false);
-        exitButton = exitObj.AddComponent<Button>();
-        Image exitImage = exitObj.AddComponent<Image>();
-        exitImage.color = new Color(0.8f, 0.2f, 0.2f); // Rojo
-        
-        GameObject exitTextObj = new GameObject("Text");
-        exitTextObj.transform.SetParent(exitObj.transform, false);
-        Text exitText = exitTextObj.AddComponent<Text>();
-        exitText.text = "EXIT";
-        exitText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        exitText.fontSize = 36;
-        exitText.alignment = TextAnchor.MiddleCenter;
-        exitText.color = Color.white;
-        
-        RectTransform exitRect = exitObj.GetComponent<RectTransform>();
-        exitRect.anchorMin = new Vector2(0.5f, 0.25f);
-        exitRect.anchorMax = new Vector2(0.5f, 0.25f);
-        exitRect.sizeDelta = new Vector2(200, 60);
-        exitRect.anchoredPosition = Vector2.zero;
-        
-        RectTransform exitTextRect = exitTextObj.GetComponent<RectTransform>();
-        exitTextRect.anchorMin = Vector2.zero;
-        exitTextRect.anchorMax = Vector2.one;
-        exitTextRect.sizeDelta = Vector2.zero;
-        
-        // Configurar listeners
-        restartButton.onClick.AddListener(RestartGame);
-        exitButton.onClick.AddListener(ExitToMenu);
     }
     
     void OnDestroy()

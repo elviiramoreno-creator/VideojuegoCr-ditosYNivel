@@ -14,17 +14,22 @@ public class GameManager : MonoBehaviour
     public static event Action OnEnemigoEsquivado;
     
     [Header("Objetivos del Nivel")]
-    [SerializeField] private int enemigosAEsquivar = 15;
-    [SerializeField] private int monedasARecoger = 10;
+    [Tooltip("Número total de enemigos que deben ser eliminados para ganar")]
+    [SerializeField] private int enemigosAEliminar = 0; // 0 = contar automáticamente al inicio
+    [Tooltip("Número total de monedas que deben ser recogidas para ganar")]
+    [SerializeField] private int monedasARecoger = 0; // 0 = contar automáticamente al inicio
     
     [Header("Referencias")]
     [SerializeField] private Transform metaNivel;
     [SerializeField] private GameObject player;
     [SerializeField] private GameOverManager gameOverManager;
+    [SerializeField] private WinManager winManager;
     
-    private int enemigosEsquivados = 0;
+    private int enemigosEliminados = 0;
     private int monedasRecogidas = 0;
     private bool nivelCompletado = false;
+    private int totalEnemigosEnNivel = 0;
+    private int totalMonedasEnNivel = 0;
     
     void Awake()
     {
@@ -64,7 +69,29 @@ public class GameManager : MonoBehaviour
             }
         }
         
+        // Buscar WinManager si no está asignado
+        if (winManager == null)
+        {
+            winManager = FindFirstObjectByType<WinManager>();
+            if (winManager == null)
+            {
+                // Crear WinManager automáticamente
+                GameObject winObj = new GameObject("WinManager");
+                winManager = winObj.AddComponent<WinManager>();
+            }
+        }
+        
+        // Contar objetivos del nivel
+        ContarObjetivosDelNivel();
+        
         ResetearContadores();
+        
+        // Asegurar que panel_GamePlay está activo
+        GameObject panelGamePlay = GameObject.Find("panel_GamePlay");
+        if (panelGamePlay != null)
+        {
+            panelGamePlay.SetActive(true);
+        }
     }
     
     void Update()
@@ -86,55 +113,97 @@ public class GameManager : MonoBehaviour
     public void RecogerMoneda(int valor)
     {
         monedasRecogidas += valor;
-        Debug.Log($"Monedas recogidas: {monedasRecogidas}/{monedasARecoger}");
+        Debug.Log($"Monedas recogidas: {monedasRecogidas}/{totalMonedasEnNivel}");
+        
+        // Verificar si se ganó el nivel
+        VerificarVictoria();
         
         // Notificar evento para actualizar puntos
         OnMonedaRecogida?.Invoke();
     }
     
-    public void EsquivarEnemigo()
+    public void EliminarEnemigo()
     {
-        enemigosEsquivados++;
-        Debug.Log($"Enemigos esquivados: {enemigosEsquivados}/{enemigosAEsquivar}");
+        enemigosEliminados++;
+        Debug.Log($"Enemigos eliminados: {enemigosEliminados}/{totalEnemigosEnNivel}");
+        
+        // Verificar si se ganó el nivel
+        VerificarVictoria();
         
         // Notificar evento para actualizar puntos
         OnEnemigoEsquivado?.Invoke();
     }
     
-    public void VerificarMetaNivel()
+    void ContarObjetivosDelNivel()
     {
-        if (nivelCompletado) return;
-        
-        CompletarNivel();
-    }
-    
-    void CompletarNivel()
-    {
-        if (nivelCompletado) return;
-        
-        // Verificar objetivos
-        if (enemigosEsquivados >= enemigosAEsquivar && monedasRecogidas >= monedasARecoger)
+        // Contar enemigos en la escena si no está configurado manualmente
+        if (enemigosAEliminar <= 0)
         {
-            nivelCompletado = true;
-            Debug.Log("¡Nivel completado! Pasando al siguiente nivel...");
-            // Aquí puedes cargar la siguiente escena
-            // SceneManager.LoadScene("SiguienteNivel");
+            EnemyController[] enemigos = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
+            totalEnemigosEnNivel = enemigos.Length;
+            Debug.Log($"Enemigos detectados en el nivel: {totalEnemigosEnNivel}");
         }
         else
         {
-            Debug.Log($"Objetivos no completados. Enemigos: {enemigosEsquivados}/{enemigosAEsquivar}, Monedas: {monedasRecogidas}/{monedasARecoger}");
+            totalEnemigosEnNivel = enemigosAEliminar;
+        }
+        
+        // El conteo de monedas ahora se hace dinámicamente cuando las monedas se registran al iniciar (Coin.Start)
+        // Esto soluciona problemas con monedas generadas por Spawners
+        Debug.Log("Esperando registro de monedas...");
+    }
+
+    public void RegistrarTotalMonedas(int cantidad)
+    {
+        totalMonedasEnNivel += cantidad;
+        Debug.Log($"Moneda registrada. Total monedas a recoger: {totalMonedasEnNivel}");
+    }
+    
+    void VerificarVictoria()
+    {
+        if (nivelCompletado) return;
+        
+        // Verificar si se han cumplido TODOS los objetivos
+        bool todasLasMonedasRecogidas = (monedasRecogidas >= totalMonedasEnNivel);
+        // bool todosLosEnemigosEliminados = (enemigosEliminados >= totalEnemigosEnNivel); // Desactivado por requisito del usuario
+        
+        if (todasLasMonedasRecogidas)
+        {
+            MostrarVictoria();
+        }
+    }
+    
+    public void MostrarVictoria()
+    {
+        if (nivelCompletado) return;
+        
+        nivelCompletado = true;
+        Debug.Log("¡VICTORIA! Has completado todos los objetivos del nivel.");
+        
+        if (winManager != null)
+        {
+            winManager.ShowWin();
+        }
+        else
+        {
+            Debug.LogWarning("WinManager no encontrado. No se puede mostrar el panel de victoria.");
         }
     }
     
     public void GameOver()
     {
         Debug.Log("Game Over!");
+        
+        if (gameOverManager == null)
+            gameOverManager = FindFirstObjectByType<GameOverManager>();
+            
         if (gameOverManager != null)
         {
             gameOverManager.ShowGameOver();
         }
         else
         {
+            Debug.LogError("GameManager: ¡No existe GameOverManager! Reiniciando nivel como fallback.");
             // Fallback: reiniciar inmediatamente si no hay GameOverManager
             ReiniciarNivel();
         }
@@ -157,7 +226,7 @@ public class GameManager : MonoBehaviour
     
     void ResetearContadores()
     {
-        enemigosEsquivados = 0;
+        enemigosEliminados = 0;
         monedasRecogidas = 0;
         nivelCompletado = false;
     }
@@ -167,8 +236,33 @@ public class GameManager : MonoBehaviour
         return monedasRecogidas;
     }
     
-    public int GetEnemigosEsquivados()
+    public int GetEnemigosEliminados()
     {
-        return enemigosEsquivados;
+        return enemigosEliminados;
+    }
+    
+    public int GetTotalMonedas()
+    {
+        return totalMonedasEnNivel;
+    }
+    
+    public int GetTotalEnemigos()
+    {
+        return totalEnemigosEnNivel;
+    }
+
+    public void VerificarMetaNivel()
+    {
+        Debug.Log("¡JUGADOR LLEGÓ A LA META DEL NIVEL!");
+
+        if (monedasRecogidas >= totalMonedasEnNivel)
+        {
+            Debug.Log($"¡VICTORIA! Recogiste {monedasRecogidas} monedas");
+            MostrarVictoria();
+        }
+        else
+        {
+            Debug.Log($"Faltan {totalMonedasEnNivel - monedasRecogidas} monedas");
+        }
     }
 }
