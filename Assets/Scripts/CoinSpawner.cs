@@ -112,13 +112,7 @@ public class CoinSpawner : MonoBehaviour
         // Instanciar moneda
         GameObject nuevaMoneda = Instantiate(prefabMoneda, posicion, Quaternion.identity);
         nuevaMoneda.name = $"Coin_{indice + 1}";
-        
-        // Registrar en game manager
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.RegistrarNuevaMoneda();
-        }
-        
+    
         // Asegurar que tenga el tag correcto
         if (!nuevaMoneda.CompareTag("Coin"))
         {

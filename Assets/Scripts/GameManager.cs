@@ -1,14 +1,15 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.SceneManagement; 
 using TMPro;
+
+ 
 using System;
 
 public class GameManager : MonoBehaviour
 {
-    // Singleton
     public static GameManager Instance { get; private set; }
     
-    // Eventos para ScoreUI (necesitas estos)
+    // Eventos para el sistema de puntos
     public static event Action OnMonedaRecogida;
     public static event Action OnEnemigoEsquivado;
     
@@ -16,19 +17,15 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int enemigosAEsquivar = 15;
     [SerializeField] private int monedasARecoger = 10;
     
-    [Header("UI Reference")]
-    [SerializeField] private HUDController hudController;
-    
     [Header("Referencias")]
     [SerializeField] private Transform metaNivel;
     [SerializeField] private GameObject player;
+    [SerializeField] private GameOverManager gameOverManager;
     
     private int enemigosEsquivados = 0;
     private int monedasRecogidas = 0;
     private bool nivelCompletado = false;
     
-    private int totalMonedasNivel = 0;
-
     void Awake()
     {
         // Singleton
@@ -41,9 +38,6 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-        
-        // Resetear total al iniciar (por si se recarga la escena)
-        totalMonedasNivel = 0;
     }
     
     void Start()
@@ -57,42 +51,20 @@ public class GameManager : MonoBehaviour
             if (metaObj != null)
                 metaNivel = metaObj.transform;
         }
-
-        // Buscar HUDController dinámicamente si no está asignado
-        if (hudController == null)
-        {
-            hudController = FindFirstObjectByType<HUDController>();
-        }
         
-        // Contar todas las monedas que existen en la escena al inicio
-        ContarMonedasIniciales();
+        // Buscar GameOverManager si no está asignado
+        if (gameOverManager == null)
+        {
+            gameOverManager = FindFirstObjectByType<GameOverManager>();
+            if (gameOverManager == null)
+            {
+                // Crear GameOverManager automáticamente
+                GameObject gameOverObj = new GameObject("GameOverManager");
+                gameOverManager = gameOverObj.AddComponent<GameOverManager>();
+            }
+        }
         
         ResetearContadores();
-        
-        // Inicializar texto UI con lo que se haya registrado hasta ahora
-        ActualizarHUDMonedas();
-    }
-    
-    void ContarMonedasIniciales()
-    {
-        // Prioridad: Configuración manual en HUDController
-        if (hudController != null && hudController.monedasInicialesManuales > 0)
-        {
-            totalMonedasNivel = hudController.monedasInicialesManuales;
-            Debug.Log($"Usando configuración manual del HUD: {totalMonedasNivel} monedas.");
-        }
-        else
-        {
-            // Fallback: Contar automáticamente
-            // Busca todos los objetos activos con el componente Coin
-            Coin[] monedas = FindObjectsByType<Coin>(FindObjectsSortMode.None);
-            totalMonedasNivel = monedas.Length;
-            Debug.Log($"Monedas detectadas automáticamente: {totalMonedasNivel}");
-        }
-        
-        // Si usamos CoinSpawner, las monedas se generan después...
-        // Pero el CoinSpawner corre en Start también. 
-        // Para asegurar, CoinSpawner debería tener prioridad o llamar a recalcular.
     }
     
     void Update()
@@ -108,41 +80,16 @@ public class GameManager : MonoBehaviour
                 metaNivel = metaObj.transform;
         }
         
-        if (hudController == null)
-            hudController = FindFirstObjectByType<HUDController>();
-
         // La verificación de meta se hace mediante trigger en MetaNivel.cs
-    }
-    
-    // Método para sumar monedas generadas dinámicamente si fuera necesario
-    public void RegistrarNuevaMoneda()
-    {
-        totalMonedasNivel++;
-        ActualizarHUDMonedas();
     }
     
     public void RecogerMoneda(int valor)
     {
         monedasRecogidas += valor;
-        Debug.Log($"Monedas recogidas: {monedasRecogidas}/{monedasARecoger}. Total en nivel: {totalMonedasNivel}");
+        Debug.Log($"Monedas recogidas: {monedasRecogidas}/{monedasARecoger}");
         
-        // Actualizar UI
-        ActualizarHUDMonedas();
-        
-        // Disparar evento para otros sistemas
+        // Notificar evento para actualizar puntos
         OnMonedaRecogida?.Invoke();
-    }
-    
-    private void ActualizarHUDMonedas()
-    {
-        if (hudController != null)
-        {
-            // Mostrar monedas RESTANTES
-            int restantes = totalMonedasNivel - monedasRecogidas;
-            if (restantes < 0) restantes = 0;
-            
-            hudController.ActualizarContadorMonedas(restantes);
-        }
     }
     
     public void EsquivarEnemigo()
@@ -150,7 +97,7 @@ public class GameManager : MonoBehaviour
         enemigosEsquivados++;
         Debug.Log($"Enemigos esquivados: {enemigosEsquivados}/{enemigosAEsquivar}");
         
-        // 🔥 DISPARAR EVENTO para ScoreUI
+        // Notificar evento para actualizar puntos
         OnEnemigoEsquivado?.Invoke();
     }
     
@@ -179,25 +126,33 @@ public class GameManager : MonoBehaviour
         }
     }
     
+    public void GameOver()
+    {
+        Debug.Log("Game Over!");
+        if (gameOverManager != null)
+        {
+            gameOverManager.ShowGameOver();
+        }
+        else
+        {
+            // Fallback: reiniciar inmediatamente si no hay GameOverManager
+            ReiniciarNivel();
+        }
+    }
+    
     public void ReiniciarNivel()
     {
         Debug.Log("Reiniciando nivel...");
         ResetearContadores();
+        
+        // Resetear puntos del ScoreUI
+        ScoreUI scoreUI = FindFirstObjectByType<ScoreUI>();
+        if (scoreUI != null)
+        {
+            scoreUI.ResetearPuntos();
+        }
+        
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-    
-    // 🔥 MÉTODO QUE FALTA: GameOver()
-    public void GameOver()
-    {
-        Debug.Log("¡Game Over! El jugador ha muerto.");
-        
-        // Aquí puedes:
-        // 1. Mostrar pantalla de Game Over
-        // 2. Parar el juego
-        // 3. Permitir reiniciar
-        
-        // Por ahora, simplemente reiniciamos el nivel
-        ReiniciarNivel();
     }
     
     void ResetearContadores()

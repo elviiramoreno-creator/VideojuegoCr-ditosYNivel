@@ -21,9 +21,15 @@ public class PlayerController : MonoBehaviour
     [Header("Sistema de Vidas")]
     [SerializeField] private int vidasMaximas = 3;
     [SerializeField] private float tiempoInvencibilidad = 1f; // Tiempo en el que el player no puede recibir daño tras ser golpeado
-    
-    [Header("Referencias UI")]
-    [SerializeField] private HUDController hudController;
+   
+    [Header("UI Vidas")]
+    [SerializeField] private GameObject imagenVida1;
+    [SerializeField] private GameObject imagenVida2;
+    [SerializeField] private GameObject imagenVida3;
+
+    [Header("UI Monedas")]
+    [SerializeField] private TextMeshProUGUI textoContadorMonedas;
+    private int monedasActuales = 0;
 
     [Header("Cámara")]
     [Tooltip("Activa esto para que la cámara siga al jugador suavemente.")]
@@ -63,12 +69,6 @@ public class PlayerController : MonoBehaviour
                 linterna = linternaTransform.gameObject;
         }
 
-        // Buscar HUDController si no está asignado
-        if (hudController == null)
-        {
-            hudController = FindFirstObjectByType<HUDController>();
-        }
-
         // Configuración Rigidbody2D
         // IMPORTANT: Usamos Dynamic para que se detecten las colisiones con el Enemigo (que es Kinematic)
         rb.gravityScale = 0f;
@@ -79,15 +79,11 @@ public class PlayerController : MonoBehaviour
         vidasActuales = vidasMaximas;
         ActualizarUI();
     }
-    
+   
     // ... (Métodos de Update y Movimiento sin cambios) ...
 
     void Update()
     {
-        // Buscar HUDController dinámicamente si se pierde
-        if (hudController == null)
-            hudController = FindFirstObjectByType<HUDController>();
-
         if (haLlegadoAMeta)
         {
             ActualizarAnimaciones(0f, 0f);
@@ -121,7 +117,7 @@ public class PlayerController : MonoBehaviour
         // Calcular velocidad final (siempre constante)
         // La velocidad base se mantiene constante, pero se puede modificar según el tilemap
         Vector2 velocidadFinal = direccionMovimiento * velocidadMovimiento * multiplicadorVelocidad;
-        
+       
         // Asegurar que la velocidad siempre sea constante (normalizar si es necesario)
         // La normalización del direccionMovimiento ya garantiza velocidad constante en todas las direcciones
 
@@ -140,18 +136,18 @@ public class PlayerController : MonoBehaviour
         {
             // Posición deseada: Player con Z = -10
             Vector3 posicionDeseada = transform.position;
-            posicionDeseada.z = -10f; 
-            
+            posicionDeseada.z = -10f;
+           
             // Movimiento suave
             camaraPrincipal.transform.position = Vector3.Lerp(camaraPrincipal.transform.position, posicionDeseada, suavizadoCamara * Time.deltaTime);
         }
     }
-    
+   
     // ... (Resto de métodos hasta RecibirDano) ...
 
-    // =======================
+    //
     // TILEMAP DETECTOR
-    // =======================
+    // 
     public void SetTilemapActual(string nombreTilemap)
     {
         // Ignorar Tilemap-Bordes
@@ -161,9 +157,9 @@ public class PlayerController : MonoBehaviour
         tilemapActual = nombreTilemap;
     }
 
-    // =======================
+    // 
     // META
-    // =======================
+    // 
     public void LlegarAMeta()
     {
         haLlegadoAMeta = true;
@@ -173,9 +169,9 @@ public class PlayerController : MonoBehaviour
             animator.SetBool("run", false);
     }
 
-    // =======================
+    // 
     // ANIMACIONES
-    // =======================
+    //
     void ActualizarAnimaciones(float inputHorizontal, float inputVertical)
     {
         if (animator == null) return;
@@ -195,10 +191,10 @@ public class PlayerController : MonoBehaviour
         // Si el animator tiene parámetros de movimiento vertical
         if (TieneParametro("MovimientoX"))
             animator.SetFloat("MovimientoX", inputHorizontal);
-        
+       
         if (TieneParametro("MovimientoY"))
             animator.SetFloat("MovimientoY", inputVertical);
-        
+       
         if (TieneParametro("Velocidad"))
             animator.SetFloat("Velocidad", velocidadMagnitud);
     }
@@ -213,9 +209,9 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
-    // =======================
+    // 
     // SISTEMA DE VIDAS
-    // =======================
+    // 
     public void RecibirDano()
     {
         // Si el player es invencible o ya está muerto, no recibir daño
@@ -239,20 +235,24 @@ public class PlayerController : MonoBehaviour
             Morir();
         }
     }
-    
+   
     void ActualizarUI()
     {
-        if (hudController != null)
-        {
-            hudController.ActualizarVidas(vidasActuales);
-        }
+        // Activar/Desactivar imágenes según la vida actual
+        if (imagenVida1 != null) imagenVida1.SetActive(vidasActuales >= 1);
+        if (imagenVida2 != null) imagenVida2.SetActive(vidasActuales >= 2);
+        if (imagenVida3 != null) imagenVida3.SetActive(vidasActuales >= 3);
     }
 
     void Morir()
     {
         vidasActuales = 0;
         ActualizarUI();
+
         
+
+       
+
         // Intentar usar GameManager, si falla, reiniciar directamente
         if (GameManager.Instance != null)
         {
@@ -266,8 +266,14 @@ public class PlayerController : MonoBehaviour
 
     public void AnadirMoneda(int cantidad)
     {
-        // La UI ahora es manejada por el GameManager
-        
+        monedasActuales += cantidad;
+       
+        // Actualizar UI
+        if (textoContadorMonedas != null)
+        {
+            textoContadorMonedas.text = monedasActuales.ToString();
+        }
+       
         // Notificar al GameManager para el progreso del nivel
         if (GameManager.Instance != null)
         {
@@ -290,9 +296,10 @@ public class PlayerController : MonoBehaviour
         return esInvencible;
     }
 
-    // =======================
+    // 
     // COLISIONES
-    // =======================
+    // 
+    // 
     /// <summary>
     /// Se ejecuta cuando el collider del player entra en contacto físico con el collider del cuerpo del enemigo (NO trigger).
     /// El player pierde 1 vida cada vez que el enemigo lo toca.
@@ -318,7 +325,7 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     void OnTriggerEnter2D(Collider2D other)
     {
-        // Eliminamos la lógica de daño aquí. 
+        // Eliminamos la lógica de daño aquí.
         // Si el enemigo usa un Trigger para detección, no queremos recibir daño al entrar en él.
         // El daño se gestionará exclusivamente en OnCollisionEnter2D (choque físico)
         // o si el EnemyController nos llama explícitamente.
