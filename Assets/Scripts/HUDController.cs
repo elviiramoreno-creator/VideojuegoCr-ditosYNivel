@@ -8,8 +8,11 @@ public class HUDController : MonoBehaviour
     [Tooltip("Arrastra aquí el objeto de texto del Canvas que muestra el número.")]
     [SerializeField] private TextMeshProUGUI textoContadorMonedas;
     
-    [Tooltip("Arrastra aquí el SPRITE (dibujo) que quieres ver en el marco.")]
-    [SerializeField] private Sprite imagenMarcoContador;
+    [Tooltip("Arrastra aquí la IMAGEN del marco o icono que está junto al texto (si hay una).")]
+    [SerializeField] private Image imagenMarcoContador;
+    
+    [Tooltip("Pon aquí el Sprite (dibujo) que quieres que tenga esa imagen.")]
+    [SerializeField] private Sprite spriteMarcoContador;
 
     [Header("Configuración Vidas")]
     [SerializeField] private GameObject[] corazones; 
@@ -23,7 +26,13 @@ public class HUDController : MonoBehaviour
 
     void Awake()
     {
-        // 1. Auto-conexión INTELIGENTE del Texto
+        // 1. Configurar la Imagen del Marco (si el usuario ha asignado las variables)
+        if (imagenMarcoContador != null && spriteMarcoContador != null)
+        {
+            imagenMarcoContador.sprite = spriteMarcoContador;
+        }
+
+        // 2. Auto-conexión INTELIGENTE del Texto
         if (textoContadorMonedas == null)
         {
             // Buscamos por nombre habitual
@@ -36,70 +45,22 @@ public class HUDController : MonoBehaviour
             {
                 textoContadorMonedas = obj.GetComponent<TextMeshProUGUI>();
             }
-            // Si sigue sin encontrarlo, busca en los hijos de este mismo objeto
+            // Si sigue sin encontrarlo, busca en los hijos de este mismo objeto (el Canvas o panel donde esté el script)
             if (textoContadorMonedas == null)
             {
                 textoContadorMonedas = GetComponentInChildren<TextMeshProUGUI>();
             }
         }
 
-        // 2. Configurar el Sprite del Marco (Si se ha asignado)
-        if (imagenMarcoContador != null)
-        {
-            // Buscar dónde poner este sprite. Buscamos un objeto Image cercano o por nombre.
-            Image targetImage = null;
-            
-            // Intentar buscar por nombres comunes
-            GameObject objImg = GameObject.Find("MarcoContador");
-            if (objImg == null) objImg = GameObject.Find("ImagenContador");
-            if (objImg == null) objImg = GameObject.Find("IconoMoneda");
-            
-            if (objImg != null)
-            {
-                targetImage = objImg.GetComponent<Image>();
-            }
-            
-            // Si tenemos el texto, busquemos una imagen hermana (muy común en UI)
-            if (targetImage == null && textoContadorMonedas != null)
-            {
-                // Buscar en hermanos del texto
-                Transform parent = textoContadorMonedas.transform.parent;
-                if (parent != null)
-                {
-                    foreach (Transform child in parent)
-                    {
-                        // Si no es el texto mismo y tiene imagen
-                        if (child != textoContadorMonedas.transform)
-                        {
-                            Image img = child.GetComponent<Image>();
-                            if (img != null)
-                            {
-                                targetImage = img;
-                                break; // Encontramos una imagen candidata
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Aplicar el sprite si encontramos dónde
-            if (targetImage != null)
-            {
-                targetImage.sprite = imagenMarcoContador;
-            }
-            else
-            {
-                Debug.LogWarning("HUDController: Se asignó un Sprite para el marco, pero NO se encontró ningún objeto Image en la escena (llamado 'MarcoContador', 'IconoMoneda', etc) donde ponerlo.");
-            }
-        }
-
-        // Validación final
+        // Validación final para ayudar al usuario
         if (textoContadorMonedas == null)
         {
-            Debug.LogError("ERROR CRÍTICO: El HUDController no encuentra el Texto del contador.");
+            Debug.LogError("ERROR CRÍTICO: El HUDController no encuentra el Texto del contador. " +
+                           "Por favor, arrastra manualmante el objeto 'TextMeshPro - Text (UI)' al campo 'Texto Contador Monedas'.");
         }
         else
         {
+            // Poner un texto por defecto para verificar que funciona
             textoContadorMonedas.text = "-";
         }
     }
