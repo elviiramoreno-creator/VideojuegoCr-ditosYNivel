@@ -188,7 +188,7 @@ public class PlayerController : MonoBehaviour
         bool estaMoviendo = velocidadMagnitud > 0.01f;
 
         // DEBUG: Descomentar si falla
-        if (estaMoviendo) Debug.Log($"Vel: {velocidadMagnitud} | X: {inputHorizontal} | Y: {inputVertical}");
+        // if (estaMoviendo) Debug.Log($"Vel: {velocidadMagnitud} | X: {inputHorizontal} | Y: {inputVertical}");
 
         if (TieneParametro("run"))
             animator.SetBool("run", estaMoviendo && !haLlegadoAMeta);
