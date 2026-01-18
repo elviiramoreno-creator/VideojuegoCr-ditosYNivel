@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+<<<<<<< Updated upstream
 using TMPro;
+=======
+>>>>>>> Stashed changes
 
 public class PlayerController : MonoBehaviour
 {
@@ -251,7 +254,10 @@ public class PlayerController : MonoBehaviour
     void Morir()
     {
         vidasActuales = 0;
+<<<<<<< Updated upstream
         ActualizarUI();
+=======
+>>>>>>> Stashed changes
         
         // Intentar usar GameManager, si falla, reiniciar directamente
         if (GameManager.Instance != null)
@@ -262,6 +268,7 @@ public class PlayerController : MonoBehaviour
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
+<<<<<<< Updated upstream
     }
 
     public void AnadirMoneda(int cantidad)
@@ -273,6 +280,8 @@ public class PlayerController : MonoBehaviour
         {
             GameManager.Instance.RecogerMoneda(cantidad);
         }
+=======
+>>>>>>> Stashed changes
     }
 
     public int GetVidasActuales()

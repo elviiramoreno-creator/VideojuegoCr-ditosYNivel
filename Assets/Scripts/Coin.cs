@@ -1,9 +1,9 @@
 using UnityEngine;
+
 public class Coin : MonoBehaviour
 {
     [Header("Configuración")]
     [SerializeField] private int valorMoneda = 1;
-    [SerializeField] private float velocidadRotacion = 90f;
     [SerializeField] private float distanciaMinimaRecogida = 0.8f; // Distancia mínima para recoger la moneda
     
     private bool recogida = false;
@@ -21,10 +21,7 @@ public class Coin : MonoBehaviour
     
     void Update()
     {
-        // Rotación visual
-        transform.Rotate(0, 0, velocidadRotacion * Time.deltaTime);
-        
-        // Verificar distancia al player cada frame
+        // Solo verificar distancia al player cada frame
         if (!recogida)
         {
             VerificarDistanciaPlayer();
@@ -51,6 +48,7 @@ public class Coin : MonoBehaviour
             Recoger();
         }
     }
+    
     void Recoger()
     {
         if (recogida) return;

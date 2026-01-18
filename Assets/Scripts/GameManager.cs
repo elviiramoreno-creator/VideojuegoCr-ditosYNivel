@@ -1,10 +1,19 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+<<<<<<< Updated upstream
 using TMPro;
+=======
+using System;
+>>>>>>> Stashed changes
 
 public class GameManager : MonoBehaviour
 {
+    // Singleton
     public static GameManager Instance { get; private set; }
+    
+    // Eventos para ScoreUI (necesitas estos)
+    public static event Action OnMonedaRecogida;
+    public static event Action OnEnemigoEsquivado;
     
     [Header("Objetivos del Nivel")]
     [SerializeField] private int enemigosAEsquivar = 15;
@@ -118,6 +127,7 @@ public class GameManager : MonoBehaviour
     public void RecogerMoneda(int valor)
     {
         monedasRecogidas += valor;
+<<<<<<< Updated upstream
         Debug.Log($"Monedas recogidas: {monedasRecogidas}/{monedasARecoger}. Total en nivel: {totalMonedasNivel}");
         
         // Actualizar UI
@@ -134,12 +144,21 @@ public class GameManager : MonoBehaviour
             
             hudController.ActualizarContadorMonedas(restantes);
         }
+=======
+        Debug.Log($"Monedas recogidas: {monedasRecogidas}/{monedasARecoger}");
+        
+        // 🔥 DISPARAR EVENTO para ScoreUI
+        OnMonedaRecogida?.Invoke();
+>>>>>>> Stashed changes
     }
     
     public void EsquivarEnemigo()
     {
         enemigosEsquivados++;
         Debug.Log($"Enemigos esquivados: {enemigosEsquivados}/{enemigosAEsquivar}");
+        
+        // 🔥 DISPARAR EVENTO para ScoreUI
+        OnEnemigoEsquivado?.Invoke();
     }
     
     public void VerificarMetaNivel()
@@ -172,6 +191,20 @@ public class GameManager : MonoBehaviour
         Debug.Log("Reiniciando nivel...");
         ResetearContadores();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+    
+    // 🔥 MÉTODO QUE FALTA: GameOver()
+    public void GameOver()
+    {
+        Debug.Log("¡Game Over! El jugador ha muerto.");
+        
+        // Aquí puedes:
+        // 1. Mostrar pantalla de Game Over
+        // 2. Parar el juego
+        // 3. Permitir reiniciar
+        
+        // Por ahora, simplemente reiniciamos el nivel
+        ReiniciarNivel();
     }
     
     void ResetearContadores()

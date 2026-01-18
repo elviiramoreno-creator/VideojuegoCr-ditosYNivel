@@ -3,9 +3,9 @@ using UnityEngine.SceneManagement;
 
 public class Menu_System : MonoBehaviour
 {
-    public void CargarEscena(string nombreEscena)
+    public void CargarEscena(string Nivel)
     {
-        SceneManager.LoadScene(nombreEscena);
+        SceneManager.LoadScene("Nivel");
     }
     public void SalirJuego()
 
