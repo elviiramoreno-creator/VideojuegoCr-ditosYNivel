@@ -94,6 +94,11 @@ public class LinternaController : MonoBehaviour
     // =======================
     // DETECCIÓN DE ENEMIGOS (ARMA)
     // =======================
+    
+    // Variables para controlar el tiempo bajo la luz antes de huir
+    private float tiempoBajoLuz = 0f;
+    [SerializeField] private float tiempoParaHuir = 1.0f; // Tiempo necesario bajo la luz para empezar a huir
+    
     /// <summary>
     /// Se ejecuta cuando un enemigo entra en el collider de la linterna.
     /// La linterna debe tener un Collider2D configurado como Trigger.
@@ -121,10 +126,10 @@ public class LinternaController : MonoBehaviour
             {
                 enemigoActual = enemy;
                 tiempoUltimoDano = Time.time;
+                tiempoBajoLuz = 0f; // Reiniciar contador
                 
-                // Hacer que el enemigo huya de la luz
-                enemy.EmpezarHuir(transform.position);
-
+                // NO huimos inmediatamente, solo aplicamos daño inicial
+                
                 // Aplicar daño del golpe
                 int dano = ObtenerFuerzaPlayer();
                 enemy.RecibirDano(dano);
@@ -156,7 +161,7 @@ public class LinternaController : MonoBehaviour
             
             if (enemy != null)
             {
-                // Actualizar la posición de la luz para que huya
+                // Actualizar la posición de la luz (importante para cuando empiece a huir)
                 enemy.ActualizarPosicionLuz(transform.position);
 
                 // Si cambiamos de enemigo o es el mismo
@@ -164,17 +169,24 @@ public class LinternaController : MonoBehaviour
                 {
                    enemigoActual = enemy;
                    tiempoUltimoDano = Time.time;
+                   tiempoBajoLuz = 0f; // Resetear contador nuevo enemigo
                    
-                   // Al cambiar, aseguramos que huya
-                   enemy.EmpezarHuir(transform.position);
-
                    // Aplicar primer daño al cambiar de enemigo
                    int dano = ObtenerFuerzaPlayer();
                    enemy.RecibirDano(dano);
                 }
                 else
                 {
-                    // Es el mismo enemigo, comprobar intervalo
+                    // Es el mismo enemigo: sumamos tiempo bajo la luz
+                    tiempoBajoLuz += Time.deltaTime;
+                    
+                    // Si lleva más de X segundos bajo la luz -> HUIR
+                    if (tiempoBajoLuz >= tiempoParaHuir)
+                    {
+                        enemy.EmpezarHuir(transform.position);
+                    }
+
+                    // Comprobar intervalo de daño
                     if (Time.time - tiempoUltimoDano >= intervaloDanos)
                     {
                         int dano = ObtenerFuerzaPlayer();

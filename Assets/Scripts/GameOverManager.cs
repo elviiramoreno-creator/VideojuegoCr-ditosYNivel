@@ -17,14 +17,24 @@ public class GameOverManager : MonoBehaviour
         // Initial search
         if (gameOverPanel == null)
         {
-            // 1. Try direct find (active only)
-            gameOverPanel = GameObject.Find("panel_gameOver");
+            // 0. Try finding by TAG (New User Request)
+            try 
+            {
+                gameOverPanel = GameObject.FindGameObjectWithTag("MenuGameOver");
+                if (gameOverPanel != null) 
+                    Debug.Log("GameOverManager: ¡Panel encontrado por TAG 'MenuGameOver'!");
+            }
+            catch {}
+
+            // 1. Try direct find (active only) - Fallback
+            if (gameOverPanel == null) gameOverPanel = GameObject.Find("panel_gameOver");
             if (gameOverPanel == null) gameOverPanel = GameObject.Find("Panel_GameOver");
             if (gameOverPanel == null) gameOverPanel = GameObject.Find("GameOverPanel");
             
-            // 2. Try inactive find
+            // 2. Try inactive find - Fallback
             if (gameOverPanel == null)
             {
+                // Only works if we have a special script or luck, usually inactive tags can't be found directly
                 gameOverPanel = FindInactiveGameObjectByName("panel_gameOver");
                 if (gameOverPanel == null) gameOverPanel = FindInactiveGameObjectByName("Panel_GameOver");
                 if (gameOverPanel == null) gameOverPanel = FindInactiveGameObjectByName("GameOverPanel");

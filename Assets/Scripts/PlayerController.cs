@@ -16,7 +16,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Combate")]
     [Tooltip("Daño que hace el player con cada golpe (linterna, etc)")]
-    public int fuerzaGolpe = 15;
+    public int fuerzaGolpe = 14;
 
     [Header("Sistema de Vidas")]
     [SerializeField] private int vidasMaximas = 3;
@@ -266,9 +266,8 @@ public class PlayerController : MonoBehaviour
         vidasActuales = 0;
         ActualizarUI();
 
-        
-
-       
+        // Hacer desaparecer al player
+        gameObject.SetActive(false);
 
         // Intentar usar GameManager, si falla, reiniciar directamente
         if (GameManager.Instance != null)
