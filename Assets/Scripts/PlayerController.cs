@@ -124,6 +124,12 @@ public class PlayerController : MonoBehaviour
         // Calcular nueva posición
         Vector2 nuevaPosicion = rb.position + velocidadFinal * Time.deltaTime;
 
+        // Debug temporal para verificar movimiento
+        if (direccionMovimiento.magnitude > 0.1f)
+        {
+            // Debug.Log($"Input: {direccionMovimiento}, VelFinal: {velocidadFinal}, TimeScale: {Time.timeScale}");
+        }
+
         // Aplicar movimiento usando Rigidbody2D para movimiento fluido
         rb.MovePosition(nuevaPosicion);
 
@@ -189,10 +195,10 @@ public class PlayerController : MonoBehaviour
         }
 
         // Si el animator tiene parámetros de movimiento vertical
-        if (TieneParametro("MovimientoX"))
+        if (velocidadMagnitud > 0.01f && TieneParametro("MovimientoX"))
             animator.SetFloat("MovimientoX", inputHorizontal);
        
-        if (TieneParametro("MovimientoY"))
+        if (velocidadMagnitud > 0.01f && TieneParametro("MovimientoY"))
             animator.SetFloat("MovimientoY", inputVertical);
        
         if (TieneParametro("Velocidad"))
